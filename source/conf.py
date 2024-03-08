@@ -14,7 +14,9 @@ release = '0.0.1'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = []
+extensions = [
+   'myst_parser'
+]
 
 templates_path = ['_templates']
 exclude_patterns = []
@@ -59,7 +61,11 @@ html_context = {
 html_static_path = ['_static']
 
 # The suffix(es) of source filenames.
-source_suffix = ['.rst', '.md']
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.txt': 'markdown',
+    '.md': 'markdown',
+}
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
