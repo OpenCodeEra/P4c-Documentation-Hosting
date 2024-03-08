@@ -24,5 +24,27 @@ language = 'y'
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'alabaster'
+html_theme = "pydata_sphinx_theme"
+
+html_theme_options = {
+    "github_url": "https://github.com/p4lang",
+    "collapse_navigation": True,
+    # "use_edit_page_button": True,
+}
+html_context = {
+    "github_url": "https://github.com",
+    "github_user": "p4lang", 
+    "github_repo": "p4c", 
+    "github_version":"main",
+    "doc_path": "docs",
+}
+
+# Add any paths that contain custom static files (such as style sheets) here, relative to this directory. They are copied after the builtin static files, so a file named "default.css" will overwrite the builtin "default.css"
 html_static_path = ['_static']
+
+# The suffix(es) of source filenames.
+source_suffix = ['.rst', '.md']
+
+# The name of an image file (relative to this directory) to place at the top
+# of the sidebar.
+html_logo = '_static/P4.png'
