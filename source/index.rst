@@ -10,14 +10,14 @@ Welcome to p4 Compiler's documentation!
 
 .. warning::
 
-   ``P4 Compiler's Documentation`` is a work in progress. This version contains mostly temporary placeholder functionalty.
+   ``P4 Compiler's Documentation`` is a work in progress i.e. 🔨&🚀. This version contains mostly temporary placeholder functionalty.
 
 
 .. toctree::
    :maxdepth: 2
-   
+
+
+   getting_started/index
    tutorials/index
    user_guide/index
-   reference/index
-   P4 16/index
    P4 14/index

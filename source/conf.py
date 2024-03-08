@@ -7,7 +7,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'P4 Documentation'
-copyright = '2024, Adarsh'
+copyright = '2024, P4 Language Consortium'
 author = 'Adarsh'
 release = '0.0.1'
 
@@ -29,6 +29,9 @@ language = 'y'
 html_theme = "pydata_sphinx_theme"
 
 html_theme_options = {
+    "logo": {
+        "text": "P4 Compiler",
+    },
     "github_url": "https://github.com/p4lang",
     "collapse_navigation": True,
     "favicons": [
@@ -47,7 +50,7 @@ html_theme_options = {
          "sizes": "180x180",
          "href": "apple-touch-icon.png"
       },]
-    # "use_edit_page_button": True,
+    ,"use_edit_page_button": True,
 }
 html_context = {
     "github_url": "https://github.com",
