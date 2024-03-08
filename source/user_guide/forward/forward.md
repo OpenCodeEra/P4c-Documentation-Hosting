@@ -164,7 +164,7 @@ way. The `logs/sX.log` files contain detailed logs
 that describing how each switch processes each packet. The output is
 detailed and can help pinpoint logic errors in your implementation.
 
-#### Cleaning up Mininet
+### Cleaning up Mininet
 
 In the latter two cases above, `make run` may leave a Mininet instance
 running in the background. Use the following command to clean up
@@ -174,7 +174,7 @@ these instances:
 make stop
 ```
 
-## Next Steps
+### Next Steps
 
 Congratulations, your implementation works! Move onto the next assignment
 [Basic Tunneling](../basic_tunnel)
