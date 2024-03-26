@@ -53,3 +53,4 @@ venv
 .venv
 doxygen-out
 
+docs/doxygen/p4c-doxygen-warn.log
