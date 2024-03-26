@@ -51,4 +51,5 @@ build
 node_modules
 venv
 .venv
+doxygen-out
 
