@@ -8,5 +8,6 @@ doxysphinx build ./Spinex  ./Spinex/build doxygen.cfg
 
 SEtupo - 
 
-used this to download - 
+used this to download the theme- 
 git submodule add https://github.com/jothepro/doxygen-awesome-css.git
+
