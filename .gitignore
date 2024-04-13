@@ -1,7 +1,7 @@
 frontends/p4/p4-lex.c
 frontends/p4/p4-parse.cpp
 py-compile
-
+_deps/
 # vi/emacs tags files
 
 TAGS
@@ -54,3 +54,5 @@ venv
 doxygen-out
 
 docs/doxygen/p4c-doxygen-warn.log
+CMakeCache.txt
+CMakeFiles/
