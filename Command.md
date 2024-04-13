@@ -5,6 +5,7 @@ First generate using doxygen
 
 doxysphinx build ./Spinex  ./Spinex/build doxygen.cfg
 
+sphinx-build -b html source build
 
 
 SEtupo - 
