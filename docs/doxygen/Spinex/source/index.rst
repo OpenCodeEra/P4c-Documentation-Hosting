@@ -17,7 +17,10 @@ Welcome to p4 Compiler's documentation!
    :maxdepth: 2
 
 
-   getting_started/index
-   tutorials/index
-   user_guide/index
-   P4 14/index
+   doxygen-out/index
+
+
+   .. getting_started/index
+   .. tutorials/index
+   .. user_guide/index
+   .. P4 14/index
