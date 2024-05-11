@@ -1,7 +1,7 @@
 name: Build doxygen and deploy to GitHub Pages
 permissions:
     actions: read
-    contents: read
+    contents: write
     pages: write
     id-token: write
     pull-requests: write
@@ -17,7 +17,7 @@ jobs:
         concurrency: ci-${{github. ref}}
         steps: 
             - name : Checkout
-              uses: actions/checkout@v3
+              uses: actions/checkout@v4
               with:
                     submodules: "true"
       
