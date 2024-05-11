@@ -1,4 +1,9 @@
 name: Build doxygen and deploy to GitHub Pages
+permissions:
+    actions: read
+    contents: read
+    pages: write
+    id-token: write
 on:
     push:
         branches:
