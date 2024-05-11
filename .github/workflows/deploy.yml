@@ -27,7 +27,7 @@ jobs:
             
             - name: Create .nojekyll 
               run: |
-                    cd ..
+                    cd build
                     touch html/.nojekyll
               shell: bash
 
