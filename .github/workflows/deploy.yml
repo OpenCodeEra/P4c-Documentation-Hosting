@@ -1,0 +1,34 @@
+name: Build doxygen and deploy to GitHub Pages
+on:
+    push:
+        branches:
+        - Deploy-branch-Awsome-CSS
+       
+jobs:
+    build-and-deploy:
+        runs-on: ubuntu-latest
+        concurrency: ci-${{github. ref}}
+        steps: 
+            - name : Checkout
+              uses: actions/checkout@v2
+              with:
+                    submodules: "true"
+      
+            - name: Install Doxygen
+              run: sudo apt-get install doxygen graphviz -y
+              shell: bash
+
+            - name: Generate Doxygen Documentation
+              run: doxygen Doxyfile
+              shell: bash
+            
+            - name: Create .nojekyll 
+              run: touch docs/html/.nojekyll
+              shell: bash
+
+            - name: Deploy to GitHub Pages
+              uses: JamesIves/github-pages-deploy-action@v4
+              with:
+                token: ${{ secrets.GITHUB_TOKEN }}
+                branch: gh-pages
+                folder: build
