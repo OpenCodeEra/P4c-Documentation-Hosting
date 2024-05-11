@@ -20,14 +20,13 @@ jobs:
     
             - name: Generate Doxygen Documentation
               run: |
-                   cd docs
-                   cd doxygen
+                   cd docs/doxygen
                    doxygen doxygen.cfg
               shell: bash
             
             - name: Create .nojekyll 
               run: |
-                    cd build
+                    cd docs/doxygen/build
                     touch html/.nojekyll
               shell: bash
 
