@@ -19,11 +19,16 @@ jobs:
               shell: bash
     
             - name: Generate Doxygen Documentation
-              run: doxygen docs/doxygen/doxygen.cfg
+              run: 
+                   cd docs
+                   cd doxygen
+                   doxygen doxygen.cfg
               shell: bash
             
             - name: Create .nojekyll 
-              run: touch docs/html/.nojekyll
+              run: 
+                    cd ..
+                    touch html/.nojekyll
               shell: bash
 
             - name: Deploy to GitHub Pages
