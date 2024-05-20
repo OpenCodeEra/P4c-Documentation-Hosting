@@ -1,7 +1,11 @@
 # Welcome to p4 Compiler's documentation!
-
+<div style="float: right; margin-left: 20px;">
+  \image html p4-logo.png  width=300px
+</div>
+<br>
 `p4c` is a reference compiler for the P4 programming language. It supports both P4-14 and P4-16; you can find more information about P4 in our carefully curated [Documentation](#).
-
+<br>
+<br>
 > @warning  `P4 Compiler's Documentation` is a work in progress i.e. 🔨&🚀. This version contains mostly temporary placeholder functionality.
 
 # Overview
