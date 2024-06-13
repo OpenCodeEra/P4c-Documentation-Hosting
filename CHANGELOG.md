@@ -6,7 +6,7 @@ We follow a monthly release cadence. Our versioning scheme is as follows:
 - **Major.Minor.Patch** versions align with the P4 specification.
 - **Revision** (the last number) is incremented with each monthly release.
 
-> [!TIP]
+> @note
 > The commit history prior to the earliest known release is not included here but is available in the commit history.
 
 
