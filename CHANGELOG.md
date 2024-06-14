@@ -1,11 +1,13 @@
 <!-- \page changelog Changelog -->
+
 # Semantic Versioning
 We follow a monthly release cadence. Our versioning scheme is as follows:
 - **Major.Minor.Patch** versions align with the P4 specification.
 - **Revision** (the last number) is incremented with each monthly release.
 
-> [!TIP]
+> <!--@note -->
 > The commit history prior to the release [v1.2.2](https://github.com/p4lang/p4c/releases/tag/v1.2.2) is not included here but is available in the [commit history](https://github.com/p4lang/p4c/commits/main/).
+
 
 ## Release v1.2.4.12 [[view](https://github.com/p4lang/p4c/pull/4699)]
 
