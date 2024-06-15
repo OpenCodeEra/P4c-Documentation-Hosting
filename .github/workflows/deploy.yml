@@ -3,8 +3,8 @@ permissions:
     actions: read
     contents: write
     pages: write
-    id-token: write
-    pull-requests: write
+    # id-token: write
+    # pull-requests: write
 
 on:
     push:
