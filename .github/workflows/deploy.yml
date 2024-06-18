@@ -21,11 +21,14 @@ jobs:
               run: sudo apt-get install graphviz -y
               shell: bash
            
-            - uses: ssciwr/doxygen-install@v1
+            - name: Install Doxygen v1.11.0
+              uses: ssciwr/doxygen-install@v1
               with:
                 version: "1.11.0"
            
-          
+            - name: Verify Doxygen Version
+              run: doxygen --version
+              
             - name: Generate Doxygen Documentation
               run: |
                    cd docs/doxygen
