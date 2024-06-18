@@ -26,11 +26,6 @@ jobs:
               run: sudo apt-get install graphviz -y
               shell: bash
 
- 
-           
-            - name: Verify Doxygen Version
-              run: doxygen --version
-
             - name: Generate Doxygen Documentation
               run: |
                    cd docs/doxygen
