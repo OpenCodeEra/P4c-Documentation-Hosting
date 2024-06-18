@@ -11,8 +11,6 @@ The P4C compiler is a compiler infrastructure for the P4 compiler designed with 
 * Use modern compiler techniques (immutable IR, visitor patterns, strong type checking, etc.)
 * Comprehensive testing
 
-
-
 ## Additional documentation
 
 * the P4_14 (P4 v1.0) language is described in the [P4 spec](http://p4.org/wp-content/uploads/2015/04/p4-latest.pdf)
