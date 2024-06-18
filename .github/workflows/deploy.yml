@@ -13,22 +13,21 @@ jobs:
     build-and-deploy:
         runs-on: ubuntu-latest
         concurrency: ci-${{github.ref}}
-        steps:
+        steps:          
+            - uses: ssciwr/doxygen-install@v1
+
             - name: Checkout
               uses: actions/checkout@v4
 
             - name: Install Dependencies
               run: sudo apt-get install graphviz -y
               shell: bash
-           
-            - name: Install Doxygen v1.11.0
-              uses: ssciwr/doxygen-install@v1
-              with:
-                version: "1.11.0"
+
+ 
            
             - name: Verify Doxygen Version
               run: doxygen --version
-              
+
             - name: Generate Doxygen Documentation
               run: |
                    cd docs/doxygen
