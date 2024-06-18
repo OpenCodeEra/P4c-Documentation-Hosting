@@ -20,23 +20,12 @@ jobs:
             - name: Install Dependencies
               run: sudo apt-get install graphviz -y
               shell: bash
-
-            - name: Export Doxygen version in environment
-              shell: bash
-              run: |
-                echo "DOXYGEN_VERSION=1.11.0" >> $GITHUB_ENV
-
-            
-            - name: "Doxygen installation"
-              shell: bash
-              run: |
-                wget https://github.com/doxygen/doxygen/releases/download/Release_${DOXYGEN_VERSION//./_}/doxygen-${DOXYGEN_VERSION}.linux.bin.tar.gz
-                tar xzvf doxygen-${DOXYGEN_VERSION}.linux.bin.tar.gz
-                cd doxygen-${DOXYGEN_VERSION}
-                sudo make install
-                cd ..
-                rm -rf doxygen-${DOXYGEN_VERSION}* # Clean up
-                
+           
+            - uses: ssciwr/doxygen-install@v1
+              with:
+                version: "1.11.0"
+           
+          
             - name: Generate Doxygen Documentation
               run: |
                    cd docs/doxygen
