@@ -28,7 +28,11 @@ jobs:
             - name: Export Doxygen version in environment
               shell: bash
               run: |
-                echo "DOXYGEN_VERSION=1.9.1" >> $GITHUB_ENV
+                echo "DOXYGEN_VERSION=1.11.0" >> $GITHUB_ENV
+      
+            - name: Install libclang-9
+              run: sudo apt-get update && sudo apt-get install -y libclang-9-dev
+
 
             - name: "Installation"
               shell: bash
