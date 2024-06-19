@@ -9,6 +9,8 @@ on:
         branches:
         - Deploy-branch-Awsome-CSS
 
+env:  
+    DOXYGEN_VERSION: 1.9.1
 jobs:
     build-and-deploy:
         runs-on: ubuntu-latest
@@ -25,11 +27,7 @@ jobs:
             #   uses: AdarshRawat1/Install-Doxygen@v1.0
             #   with:
             #     version: '1.11.0'
-            - name: Export Doxygen version in environment
-              shell: bash
-              run: |
-                echo "DOXYGEN_VERSION=1.11.0" >> $GITHUB_ENV
-      
+
             - name: Install Clang and dependencies
               run: |
                 sudo apt-get update
