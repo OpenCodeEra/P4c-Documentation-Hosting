@@ -10,7 +10,8 @@ on:
         - Deploy-branch-Awsome-CSS
 
 env:  
-    DOXYGEN_VERSION: 1.9.1
+    DOXYGEN_VERSION: 1.11.0
+  
 jobs:
     build-and-deploy:
         runs-on: ubuntu-latest
@@ -22,7 +23,7 @@ jobs:
             - name: Install Dependencies
               run: |
                 sudo apt-get update 
-                sudo apt-get install -y graphviz clang libclang1-9
+                sudo apt-get install -y clang graphviz  libclang1-9
               shell: bash
 
             - name: "Doxygen Installation"
@@ -33,7 +34,8 @@ jobs:
                 cd doxygen-${DOXYGEN_VERSION}
                 sudo make install
                 cd ..
-                rm -rf doxygen-${DOXYGEN_VERSION}*             
+                rm -rf doxygen-${DOXYGEN_VERSION}*  
+
             - name: Generate Doxygen Documentation
               run: |
                    cd docs/doxygen
