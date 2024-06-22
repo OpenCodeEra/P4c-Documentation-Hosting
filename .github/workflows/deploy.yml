@@ -11,6 +11,7 @@ on:
 
 env:  
     DOXYGEN_VERSION: 1.10.0
+    DOXYGEN_AWESOME_VERSION: 2.3.3
   
 jobs:
     build-and-deploy:
@@ -37,6 +38,10 @@ jobs:
                 sudo make install
                 cd ..
                 rm -rf doxygen-${DOXYGEN_VERSION}*  
+            - name: Install Doxygen Awesome Themes
+              working-directory: ./docs/doxygen
+              run: |
+                git clone --depth 1 -b v${{ env.DOXYGEN_AWESOME_VERSION }} https://github.com/jothepro/doxygen-awesome-css
 
             - name: Generate Doxygen Documentation
               run: |
