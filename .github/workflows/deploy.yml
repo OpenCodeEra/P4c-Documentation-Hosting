@@ -46,6 +46,7 @@ jobs:
             - name: Generate Doxygen Documentation
               run: |
                    cd docs/doxygen
+                   doxygen -u doxygen.cfg
                    doxygen doxygen.cfg
               shell: bash
 
