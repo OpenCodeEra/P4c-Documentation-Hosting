@@ -1,7 +1,8 @@
+[//]: # ( 
+\page Sample Repository5 )
+
 # Repository
 
-[//]: # ( 
-\page Repository5 Repository5 )
 
 
 This folder contains documentation for the P4_16 prototype compiler.
