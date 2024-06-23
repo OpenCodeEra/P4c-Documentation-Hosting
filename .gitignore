@@ -56,3 +56,4 @@ doxygen-out
 docs/doxygen/p4c-doxygen-warn.log
 CMakeCache.txt
 CMakeFiles/
+docs/doxygen/doxygen-awesome-css/
