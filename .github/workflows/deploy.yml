@@ -10,7 +10,7 @@ on:
         - Deploy-branch-Awsome-CSS
 
 env:  
-    DOXYGEN_VERSION: 1.10.0
+    DOXYGEN_VERSION: 1.11.0
     DOXYGEN_AWESOME_VERSION: 2.3.3
   
 jobs:
