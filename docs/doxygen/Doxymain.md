@@ -1,9 +1,5 @@
 # Welcome to p4 Compiler's documentation!
 
-
-
-`p4c` is a reference compiler for the P4 programming language. It supports both P4-14 and P4-16; you can find more information about P4 in our carefully curated.
-
 @htmlonly
 <div style="float: right; width: 600px; height: 400px;">
 <!-- draw.io diagram -->
@@ -29,8 +25,13 @@ com%2Fuc%3Fid%3D16X8Z_4-J8mHQPxuxm9HjWppPMTTXZdZ6%26export%3Ddownload"></script>
 
 @endhtmlonly
 
+`p4c` is a reference compiler for the P4 programming language. It supports both P4-14 and P4-16; you can find more information about P4 in our carefully curated.
+
+
+
 
 <br><br><br><br><br><br><br><br><br><br>
+ <br><br><br>
  <br><br><br>
  
 
