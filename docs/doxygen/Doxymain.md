@@ -1,15 +1,41 @@
 # Welcome to p4 Compiler's documentation!
 
-<div style="float: right;">
-<img src ="./arcitecture5.svg"  width="600" height="400" >
-</div>
+
 
 `p4c` is a reference compiler for the P4 programming language. It supports both P4-14 and P4-16; you can find more information about P4 in our carefully curated.
+
+@htmlonly
+<div style="float: right; width: 600px; height: 400px;">
+<!-- draw.io diagram -->
+<div class="mxgraph" style="" data-mxgraph="{&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;lightbox&quot;:false,&quot;nav&quot;:true,&quot;edit&quot;:&quot;_blank&quot;,&quot;url&quot;:&quot;https://drive.google.com/uc?id=16X8Z_4-J8mHQPxuxm9HjWppPMTTXZdZ6&amp;export=download&quot;}"></div>
+<script type="text/javascript" src="https://viewer.diagrams.net/embed2.js?&fetch=https%3A%2F%2Fdrive.google.
+com%2Fuc%3Fid%3D16X8Z_4-J8mHQPxuxm9HjWppPMTTXZdZ6%26export%3Ddownload"></script>
+
+<button id="toggle" onclick="toggleFlow()">Toggle</button>
+
+<script>
+ function toggleFlow() {
+        const svgDocument = document.querySelector('.mxgraph svg');
+        if (svgDocument) {
+            // Select edges
+            const edges = svgDocument.querySelectorAll('path:not([marker-end])'); 
+            edges.forEach(edge => {
+                edge.classList.toggle('flow');
+            });
+        }
+    }
+</script>
+</div>
+
+@endhtmlonly
+
 
 <br><br><br><br><br><br><br><br><br><br>
  <br><br><br>
  
+
 @htmlonly
+
 <!-- https://www.svgrepo.com/collection/scarlab-oval-line-icons/ -->
 <div class="card-container">
 
