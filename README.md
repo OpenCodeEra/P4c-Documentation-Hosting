@@ -1,27 +1,50 @@
+# P4C
+[![Main Build](https://github.com/p4lang/p4c/actions/workflows/ci-test-debian.yml/badge.svg)](https://github.com/p4lang/p4c/actions/workflows/ci-test-debian.yml)
+[![Main Build](https://github.com/p4lang/p4c/actions/workflows/ci-test-fedora.yml/badge.svg)](https://github.com/p4lang/p4c/actions/workflows/ci-test-fedora.yml)
+[![Main Build](https://github.com/p4lang/p4c/actions/workflows/ci-test-mac.yml/badge.svg)](https://github.com/p4lang/p4c/actions/workflows/ci-test-mac.yml)
 [![Bazel Build](https://github.com/p4lang/p4c/actions/workflows/ci-bazel.yml/badge.svg)](https://github.com/p4lang/p4c/actions/workflows/ci-bazel.yml)
 [![Validation](https://github.com/p4lang/p4c/actions/workflows/ci-validation-nightly.yml/badge.svg)](https://github.com/p4lang/p4c/actions/workflows/ci-validation-nightly.yml)
 [![Docker Container](https://github.com/p4lang/p4c/actions/workflows/ci-container-image.yml/badge.svg)](https://github.com/p4lang/p4c/actions/workflows/ci-container-image.yml)
 
-# p4c
+* [Getting started](#getting-started)
+   * [Installing packaged versions of P4C](#installing-packaged-versions-of-p4c)
+   * [Installing P4C from source](#installing-p4c-from-source)
+* [Dependencies](#dependencies)
+   * [Ubuntu dependencies](#ubuntu-dependencies)
+   * [Fedora dependencies](#fedora-dependencies)
+   * [macOS dependencies](#macos-dependencies)
+   * [Garbage collector](#garbage-collector)
+   * [Crash dumps](#crash-dumps)
+* [Development tools](#development-tools)
+   * [Git setup](#git-setup)
+* [Docker](#docker)
+* [Bazel](#bazel)
+* [Build system](#build-system)
+   * [Defining new CMake targets](#defining-new-cmake-targets)
+* [Known issues](#known-issues)
+   * [Frontend](#frontend)
+   * [Backends](#backends)
+* [How to Contribute](#how-to-contribute)
+* [P4 Compiler Onboarding](#p4-compiler-onboarding)
+* [Contact](#contact)
 
-p4c is a reference compiler for the P4 programming language.
+P4C is a reference compiler for the P4 programming language.
 It supports both P4-14 and P4-16; you can find more information about P4
 [here](http://p4.org) and the specifications for both versions of the language
 [here](https://p4.org/specs).
-One fact attesting to the level of quality and completeness of p4c's
-code is that its front-end code, mid-end code, and p4c-graphs back end
+One fact attesting to the level of quality and completeness of P4C's
+code is that its front-end code, mid-end code, and P4C-graphs back end
 are used as the basis for at least one commercially supported P4
 compiler.
 
-p4c is modular; it provides a standard frontend and midend which can be combined
+P4C is modular; it provides a standard frontend and midend which can be combined
 with a target-specific backend to create a complete P4 compiler. The goal is to
 make adding new backends easy.
 
 The code contains seven sample backends:
 * p4c-bm2-ss: can be used to target the P4 `simple_switch` written using
-  the BMv2 behavioral model https://github.com/p4lang/behavioral-model,
-* p4c-dpdk: can be used to target the DPDK software switch (SWX) pipeline
-  https://doc.dpdk.org/guides/rel_notes/release_20_11.html,
+  the [BMv2 behavioral model](https://github.com/p4lang/behavioral-model),
+* p4c-dpdk: can be used to target the [DPDK software switch (SWX) pipeline](https://doc.dpdk.org/guides/rel_notes/release_20_11.html),
 * p4c-ebpf: can be used to generate C code which can be compiled to [eBPF](https://en.wikipedia.org/wiki/Berkeley_Packet_Filter)
   and then loaded in the Linux kernel. The eBPF backend currently implements three architecture models:
   [ebpf_model.p4 for packet filtering, xdp_model.p4 for XDP](./backends/ebpf/README.md) and
@@ -50,7 +73,7 @@ p4c --target bmv2 --arch v1model --std p4-14 my-p4-14-prog.p4
 ```
 
 By adding the option `--p4runtime-files <filename>.txt` as shown in
-the example commands below, p4c will also create a file
+the example commands below, P4C will also create a file
 `<filename>.txt`.  This is a text format "P4Info" file, containing a
 description of the tables and other objects in your P4 program that
 have an auto-generated control plane API.
@@ -100,15 +123,15 @@ instructions):
 dot -Tpdf ParserImpl.dot > ParserImpl.pdf
 ```
 
-# Getting started
+## Getting started
 
-## Installing packaged versions of p4c
+### Installing packaged versions of P4C
 
-p4c has package support for several Ubuntu and Debian distributions.
+P4C has package support for several Ubuntu and Debian distributions.
 
-### Ubuntu
+#### Ubuntu
 
-A p4c package is available in the following repositories for Ubuntu 20.04 and newer.
+A P4C package is available in the following repositories for Ubuntu 20.04 and newer.
 
 ```bash
 source /etc/lsb-release
@@ -118,7 +141,7 @@ sudo apt-get update
 sudo apt install p4lang-p4c
 ```
 
-### Debian
+#### Debian
 
 For Debian 11 (Bullseye) it can be installed as follows:
 
@@ -129,20 +152,20 @@ sudo apt update
 sudo apt install p4lang-p4c
 ```
 
-If you cannot use a repository to install p4c, you can download the `.deb` file
+If you cannot use a repository to install P4C, you can download the `.deb` file
 for your release and install it manually. You need to download a new file each
-time you want to upgrade p4c.
+time you want to upgrade P4C.
 
-1. Go to https://build.opensuse.org/package/show/home:p4lang/p4lang-p4c, click on
+1. Go to [p4lang-p4c package page on OpenSUSE Build Service](https://build.opensuse.org/package/show/home:p4lang/p4lang-p4c), click on
 "Download package" and choose your operating system version.
 
-2. Install p4c, changing the path below to the path where you downloaded the package.
+2. Install P4C, changing the path below to the path where you downloaded the package.
 
 ```bash
 sudo dpkg -i /path/to/package.deb
 ```
 
-## Installing p4c from source
+### Installing P4C from source
 1.  Clone the repository. It includes submodules, so be sure to use
     `--recursive` to pull them in:
     ```
@@ -173,20 +196,13 @@ sudo dpkg -i /path/to/package.deb
       symbols to run in gdb. Default is RELEASE.
      - `-DCMAKE_INSTALL_PREFIX=<path>` -- set the directory where
        `make install` installs the compiler. Defaults to /usr/local.
-     - `-DENABLE_BMV2=ON|OFF`. Enable [the bmv2
-       backend](backends/bmv2/README.md). Default ON.
-     - `-DENABLE_EBPF=ON|OFF`. Enable [the ebpf
-       backend](backends/ebpf/README.md). Default ON.
-     - `-DENABLE_UBPF=ON|OFF`. Enable [the ubpf
-       backend](backends/ubpf/README.md). Default ON.
-     - `-DENABLE_DPDK=ON|OFF`. Enable [the DPDK
-       backend](backends/dpdk/README.md). Default ON.
-     - `-DENABLE_P4C_GRAPHS=ON|OFF`. Enable [the p4c-graphs
-       backend](backends/graphs/README.md). Default ON.
-     - `-DENABLE_P4TEST=ON|OFF`. Enable [the p4test
-       backend](backends/p4test/README.md). Default ON.
-     - `-DENABLE_TEST_TOOLS=ON|OFF`. Enable [the p4tools
-         backend](backends/p4tools/README.md). Default OFF.
+     - `-DENABLE_BMV2=ON|OFF`. Enable [the bmv2 backend](backends/bmv2/README.md). Default ON.
+     - `-DENABLE_EBPF=ON|OFF`. Enable [the ebpf backend](backends/ebpf/README.md). Default ON.
+     - `-DENABLE_UBPF=ON|OFF`. Enable [the ubpf backend](backends/ubpf/README.md). Default ON.
+     - `-DENABLE_DPDK=ON|OFF`. Enable [the DPDK backend](backends/dpdk/README.md). Default ON.
+     - `-DENABLE_P4C_GRAPHS=ON|OFF`. Enable [the p4c-graphs backend](backends/graphs/README.md). Default ON.
+     - `-DENABLE_P4TEST=ON|OFF`. Enable [the p4test backend](backends/p4test/README.md). Default ON.
+     - `-DENABLE_TEST_TOOLS=ON|OFF`. Enable [the p4tools backend](backends/p4tools/README.md). Default OFF.
      - `-DENABLE_DOCS=ON|OFF`. Build documentation. Default is OFF.
      - `-DENABLE_GC=ON|OFF`. Enable the use of the garbage collection
        library. Default is ON.
@@ -222,12 +238,12 @@ sudo dpkg -i /path/to/package.deb
     p4c -b bmv2-ss-p4org program.p4 -o program.bmv2.json
     ```
 
-If you plan to contribute to p4c, you'll find more useful information
+If you plan to contribute to P4C, you'll find more useful information
 [here](#development-tools).
 
-# Dependencies
+## Dependencies
 
-Ubuntu 20.04 is the officially supported platform for p4c. There's also
+Ubuntu 20.04 is the officially supported platform for P4C. There's also
 unofficial support for macOS 11. Other platforms are untested; you can try to
 use them, but YMMV.
 
@@ -252,12 +268,12 @@ use them, but YMMV.
   (2.38.0 or higher).
 
 Backends may have additional dependencies. The dependencies for the backends
-included with `p4c` are documented here:
+included with `P4C` are documented here:
   * [BMv2](backends/bmv2/README.md)
   * [eBPF](backends/ebpf/README.md)
   * [graphs](backends/graphs/README.md)
 
-## Ubuntu dependencies
+### Ubuntu dependencies
 
 Most dependencies can be installed using `apt-get install`:
 
@@ -270,10 +286,19 @@ tcpdump
 pip3 install --user -r requirements.txt
 ```
 
-For documentation building:
-`sudo apt-get install -y doxygen graphviz texlive-full`
+**For documentation building:**
 
-`p4c` also depends on Google Protocol Buffers (Protobuf). `p4c` requires version
+**Tools**
+```bash
+sudo apt-get install -y doxygen graphviz texlive-full
+```
+**Theme** 
+```bash
+git clone --depth 1 -b v2.3.3 https://github.com/jothepro/doxygen-awesome-css ./docs/doxygen/awesome_css
+
+```
+
+`P4C` also depends on Google Protocol Buffers (Protobuf). `P4C` requires version
 3.0 or higher, so the packaged version provided in Ubuntu 20.04 **should**
 work. However, P4C typically installs its own version of Protobuf using CMake's `FetchContent` module
 (at the moment, 3.25.3). If you are experiencing issues with the Protobuf version shipped with your OS distribution, we recommend that to install Protobuf 3.25.3 from source. You can find instructions
@@ -283,15 +308,15 @@ After cloning Protobuf and before you build, check-out version 3.25.3:
 `git checkout v3.25.3`
 
 Please note that while all Protobuf versions newer than 3.0 should work for
-`p4c` itself, you may run into trouble with some extensions and other p4lang
+P4C itself, you may run into trouble with Abseil, some extensions and other p4lang
 projects unless you install version 3.25.3.
 
-`p4c` also depends on Google Abseil library. This library is also a pre-requisite for Protobuf of any version newer than 3.21. Therefore the use of Protobuf of suitable version automatically fulfils Abseil dependency. P4C typically installs its own version of Abseil using CMake's `FetchContent` module (Abseil LTS 20240116.1 at the moment).
+P4C also depends on Google Abseil library. This library is also a pre-requisite for Protobuf of any version newer than 3.21. Therefore the use of Protobuf of suitable version automatically fulfils Abseil dependency. P4C typically installs its own version of Abseil using CMake's `FetchContent` module (Abseil LTS 20240116.1 at the moment).
 
-### CMake
-p4c requires a CMake version of at least 3.16.3 or higher. On older systems, a newer version of CMake can be installed using `pip3 install --user cmake==3.16.3`. We have a CI test on Ubuntu 18.04 that uses this option, but there is no guarantee that this will lead to a successful build.
+#### CMake
+P4C requires a CMake version of at least 3.16.3 or higher. On older systems, a newer version of CMake can be installed using `pip3 install --user cmake==3.16.3`. We have a CI test on Ubuntu 18.04 that uses this option, but there is no guarantee that this will lead to a successful build.
 
-## Fedora dependencies
+### Fedora dependencies
 
 ```bash
 sudo dnf install -y cmake g++ git automake libtool gc-devel bison flex \
@@ -301,16 +326,21 @@ python3 python3-pip tcpdump
 sudo pip3 install -r requirements.txt
 ```
 
-For documentation building:
+**For documentation building:**
 
+**Tools**
 ```bash
 sudo dnf install -y doxygen graphviz texlive-scheme-full
+```
+**Theme**
+```bash
+git clone --depth 1 -b v2.3.3 https://github.com/jothepro/doxygen-awesome-css ./docs/doxygen/awesome_css
 ```
 
 You can also look at the [dependencies installation script](tools/install_fedora_deps.sh)
 for a fresh Fedora instance.
 
-## macOS dependencies
+### macOS dependencies
 
 Installing on macOS:
 
@@ -349,8 +379,13 @@ Installing on macOS:
   ```
   brew install doxygen graphviz
   ```
+  Optional Documentation theme: 
+  ```
+  git clone --depth 1 -b v2.3.3 https://github.com/jothepro/doxygen-awesome-css ./docs/doxygen/awesome_css
+  ```
+
   Homebrew offers a `protobuf` formula. It installs version 3.2, which should
-  work for p4c itself but may cause problems with some extensions. It's
+  work for P4C itself but may cause problems with some extensions. It's
   preferable to use the version of Protobuf which is supplied with CMake's fetchcontent (3.25.3).
 
   The `protobuf` formula requires the following CMake variables to be set,
@@ -365,10 +400,10 @@ Installing on macOS:
     -DENABLE_PROTOBUF_STATIC=OFF
   ```
 
-## Garbage collector
+### Garbage collector
 
 P4c relies on [BDW garbage collector](https://github.com/ivmai/bdwgc)
-to manage its memory.  By default, the p4c executables are linked with
+to manage its memory.  By default, the P4C executables are linked with
 the garbage collector library.  When the GC causes problems, this can
 be disabled by setting `ENABLE_GC` cmake option to `OFF`.  However,
 this will dramatically increase the memory usage by the compiler, and
@@ -376,14 +411,14 @@ may become impractical for compiling large programs.  **Do not disable
 the GC**, unless you really have to.  We have noticed that this may be
 a problem on MacOS.
 
-## Crash dumps
+### Crash dumps
 
 P4c will use [libbacktrace](https://github.com/ianlancetaylor/libbacktrace.git)
 to produce readable crash dumps if it is available.  This is an optional
 dependency; if it is not available everything should build just fine, but
 crash dumps will not be very readable.
 
-# Development tools
+## Development tools
 
 There is a variety of design and development documentation [here](docs/README.md).
 
@@ -404,18 +439,18 @@ To enable building code documentation, please run `cmake
 documentation. The HTML output is available in
 `build/doxygen-out/html/index.html`.
 
-## Git setup
+### Git setup
 
-Occasionally formatting commits are applied to p4c. These pollute the git history. To ignore these commits in git blame, run this command
+Occasionally formatting commits are applied to P4C. These pollute the git history. To ignore these commits in git blame, run this command
 ```git config blame.ignoreRevsFile .git-blame-ignore-revs```
 
-The p4c code base is subject to a series of linter checks which are checked by CI. To avoid failing these checks and wasting unnecessary CI cycles and resources, you can install [git commit hooks](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks) by running
+The P4C code base is subject to a series of linter checks which are checked by CI. To avoid failing these checks and wasting unnecessary CI cycles and resources, you can install [git commit hooks](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks) by running
 ```./tools/install_git_hooks.sh```
 These commit hooks will run on every commit and check the files you are planning to commit with cpplint and clang-format.
 
-# Docker
+## Docker
 
-A Dockerfile is included. You can generate an image which contains a copy of p4c
+A Dockerfile is included. You can generate an image which contains a copy of P4C
 in `/p4c/build` by running:
 
 ```
@@ -424,11 +459,11 @@ docker build -t p4c .
 
 On some platforms Docker limits the memory usage of any container, even
 containers used during the `docker build` process. On macOS in particular the
-default is 2GB, which is not enough to build p4c. Increase the memory limit to
+default is 2GB, which is not enough to build P4C. Increase the memory limit to
 at least 4GB via Docker preferences or you are likely to see "internal compiler
-errors" from gcc which are caused by low memory.
+errors" from GCC which are caused by low memory.
 
-# Bazel
+## Bazel
 [![Bazel Build](https://github.com/p4lang/p4c/actions/workflows/ci-bazel.yml/badge.svg)](https://github.com/p4lang/p4c/actions/workflows/ci-bazel.yml)
 
 The project can also be build using [Bazel](https://bazel.build):
@@ -439,16 +474,16 @@ We run continuous integration to ensure this works with the latest version of
 Bazel.
 
 We also provide a [`p4_library` rule](bazel/p4_library.bzl) for invoking
-p4c during the build process of 3rd party Bazel projects.
+P4C during the build process of 3rd party Bazel projects.
 
-See [bazel/example](bazel/example) for an example of how to use or extend p4c in
+See [bazel/example](bazel/example) for an example of how to use or extend P4C in
 your own Bazel project. You may use it as a template to get you started.
 
-# Build system
+## Build system
 
 The build system is based on cmake.  This section describes how it can be customized.
 
-## Defining new CMake targets
+### Defining new CMake targets
 
 When building a new backend target, add it into the development tree in the
 extensions subdirectory. The cmake-based build system will automatically include
@@ -456,7 +491,7 @@ it if it contains a CMakeLists.txt file.
 
 For a new backend, the cmake file should contain the following rules:
 
-### IR definition files
+#### IR definition files
 
 Backend specific IR definition files should be added to the global list
 of IR_DEF_FILES as they are processed together with the core IR files.
@@ -476,7 +511,7 @@ set(EXTENSION_IR_SOURCES ${EXTENSION_IR_SOURCES} ${MY_IR_SRCS} PARENT_SCOPE)
 ```
 Again, `MY_IR_SRCS` is a list of file names with absolute path.
 
-### Source files
+#### Source files
 
 Sources (.cpp and .h) should be added to the cpplint and clang-format target using the following rule:
 
@@ -490,7 +525,7 @@ Python files should be added to the black and isort target using the following r
 add_black_files (${CMAKE_CURRENT_SOURCE_DIR} "${MY_SOURCES_AND_HEADERS}")
 ```
 
-The p4c CMakeLists.txt will use that name to figure the full path of the files to lint.
+The P4C CMakeLists.txt will use that name to figure the full path of the files to lint.
 
 clang-format, black, and isort need to be installed before the linter can be used. They can be installed with the following command:
 ```
@@ -498,13 +533,13 @@ pip3 install --user "clang-format==18.1.0" "black==24.3.0" "isort==5.13.2"
 ```
 clang-format can be checked using the `make clang-format` command. Complaints can be fixed by running `make clang-format-fix-errors`. black and isort can be checked using the `make black` or `make isort` command respectively. Complaints can be fixed by running `make black-fix-errors` or `make isort-fix-errors`.
 
-cpplint, clang-format, and black/isort run as checks as port of p4c's continuous integration process. To make sure that these tests pass, we recommend installing the appropriate git hooks. This can be done by running
+cpplint, clang-format, and black/isort run as checks as port of P4C's continuous integration process. To make sure that these tests pass, we recommend installing the appropriate git hooks. This can be done by running
 ```
 ./tools/install_git_hooks.sh
 ```
 clang-format, cpplint, and black/isort checks will be enforced on every branch commit. In cases where checks are failing but the commit is sound, one can bypass the hook enforcement using `git commit --no-verify`.
 
-### Target
+#### Target
 
 Define a target for your executable. The target should link against
 the core `P4C_LIBRARIES` and `P4C_LIB_DEPS`.  `P4C_LIB_DEPS` are
@@ -523,7 +558,7 @@ target_link_libraries (p4c-mybackend ${P4C_LIBRARIES} ${P4C_LIB_DEPS})
 add_dependencies(p4c-mybackend genIR)
 ```
 
-### Tests
+#### Tests
 
 We implemented support equivalent to the automake `make check` rules.
 All tests should be included in `make check` and in addition, we support
@@ -556,14 +591,14 @@ See the documentation for
 [`p4c_add_tests`](cmake/P4CUtils.cmake) for more information on the
 arguments to these macros.
 
-To pass custom arguments to p4c, you can set the environment variable `P4C_ARGS`:
+To pass custom arguments to P4C, you can set the environment variable `P4C_ARGS`:
 ```
 make check P4C_ARGS="-Xp4c=MY_CUSTOM_FLAG"
 ```
 
-When making changes to p4c, it is sometimes useful to be able to run
+When making changes to P4C, it is sometimes useful to be able to run
 the tests while overwriting the expected output files that are saved
-in this repository.  One such situation is when your changes to p4c
+in this repository.  One such situation is when your changes to P4C
 cause the names of compiler-generated local variables to change.  To
 force the expected output files to be rewritten while running the
 tests, assign a value to the shell environment variable
@@ -573,11 +608,11 @@ tests, assign a value to the shell environment variable
 P4TEST_REPLACE=1 make check
 ```
 
-### Installation
+#### Installation
 
 Define rules to install your backend. Typically you need to install
 the binary, the additional architecture headers, and the configuration
-file for the p4c driver.
+file for the P4C driver.
 
 ```
 install (TARGETS p4c-mybackend
@@ -588,7 +623,7 @@ install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.mybackend.cfg
   DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY}/p4c_src)
 ```
 
-# Known issues
+## Known issues
 
 Issues with the compiler are tracked on
 [GitHub](https://github.com/p4lang/p4c/issues). Before opening a new
@@ -599,9 +634,9 @@ much appreciated.
 In addition to the list of issues on Github, there are a number of
 currently unsupported features listed below:
 
-## Frontend
+### Frontend
 
-### P4_14 features not supported in P4_16
+#### P4_14 features not supported in P4_16
 
 * extern/blackbox attributes -- there is support for carrying them in
 the IR, but they are lost if P4_16 code is output.  Backends can
@@ -616,10 +651,36 @@ access them from the IR
 
 * No support for P4_14 parser exceptions.
 
-## Backends
+### Backends
 
-### Bmv2 Backend
+#### Bmv2 Backend
 
 * Tables with multiple apply calls
 
 See also [unsupported P4_16 language features](backends/bmv2/README.md#unsupported-p4_16-language-features).
+
+## How to Contribute
+
+We welcome and appreciate new contributions. Please take a moment to review our [Contribution Guidelines](CONTRIBUTING.md) to get started.
+
+## P4 Compiler Onboarding
+Educational material on P4: 
+
+- General hands-on [tutorials](https://github.com/p4lang/tutorials).
+- [Technical documentation on P4-related topics](https://github.com/jafingerhut/p4-guide?tab=readme-ov-file#introduction).
+- Motivating P4: [IEEE ICC 2018 // Keynote: Nick McKeown, Programmable Forwarding Planes Are Here To Stay](https://www.youtube.com/watch?v=8ie0FcsN07U)
+- Introducing P4-16 in detail: 
+  - Part 1: [Introduction to P4_16. Part 1](https://www.youtube.com/watch?v=GslseT4hY1w)
+  - Part 2: [Introduction to P4_16. Part 2](https://www.youtube.com/watch?v=yqxpypXIOtQ)
+- Material on the official P4 compiler: 
+  - [Understanding the Open-Source P4-16 Compiler - February 15, 2022 - Mihai Budiu](https://www.youtube.com/watch?v=Rx5AQ0IF6eU)
+  - [Understanding P4-16 Open-Source Compiler, Part 2 - March 1, 2022 - Mihai Budiu](https://www.youtube.com/watch?v=YnPHPaPSmpU)
+  - [Compiler Design - Implementation Architecture](https://github.com/p4lang/p4c/blob/main/docs/compiler-design.pdf).
+- Introduction to P4Runtime: [Next-Gen SDN Tutorial - Session 1: P4 and P4Runtime Basics](https://www.youtube.com/watch?v=KRx92qSLgo4)
+
+## Contact
+We appreciate your contributions and look forward to working with you to improve the P4 Compiler Project (P4C)!
+- For further assistance or questions regarding contributions, reach out to us in our [community chat](https://p4lang.zulipchat.com/).  [Joining link](https://p4lang.zulipchat.com/join/kjtv2reafrylssget425wx6c/) .
+- For general P4-related questions, use the [P4 forum](https://forum.p4.org/).
+- For other communication channels click [here](https://p4.org/join/).
+
