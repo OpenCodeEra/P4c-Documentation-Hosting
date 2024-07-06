@@ -36,9 +36,9 @@ class EBPFTablePSA : public EBPFTable {
     typedef std::vector<EntriesGroup_t> EntriesGroupedByMask_t;
     EntriesGroupedByMask_t getConstEntriesGroupedByMask();
     bool hasConstEntries();
-    const cstring addPrefixFunctionName = "add_prefix_and_entries";
-    const cstring tuplesMapName = instanceName + "_tuples_map";
-    const cstring prefixesMapName = instanceName + "_prefixes";
+    const cstring addPrefixFunctionName = "add_prefix_and_entries"_cs;
+    const cstring tuplesMapName = instanceName + "_tuples_map"_cs;
+    const cstring prefixesMapName = instanceName + "_prefixes"_cs;
 
  protected:
     ActionTranslationVisitor *createActionTranslationVisitor(
@@ -68,8 +68,8 @@ class EBPFTablePSA : public EBPFTable {
                            std::vector<cstring> &keyNames, std::vector<cstring> &valueNames);
 
  public:
-    // We use vectors to keep an order of Direct Meters or Counters from a P4 program.
-    // This order is important from CLI tool point of view.
+    /// We use vectors to keep an order of Direct Meters or Counters from a P4 program.
+    /// This order is important from CLI tool point of view.
     std::vector<std::pair<cstring, EBPFCounterPSA *>> counters;
     std::vector<std::pair<cstring, EBPFMeterPSA *>> meters;
     EBPFTableImplementationPSA *implementation;
@@ -118,6 +118,29 @@ class EBPFTablePSA : public EBPFTable {
     }
 
     DECLARE_TYPEINFO(EBPFTablePSA, EBPFTable);
+};
+
+class EBPFTablePsaPropertyVisitor : public Inspector {
+ protected:
+    EBPFTablePSA *table;
+
+ public:
+    explicit EBPFTablePsaPropertyVisitor(EBPFTablePSA *table) : table(table) {}
+
+    /// Use these two preorders to print error when property contains something other than name of
+    /// extern instance. ListExpression is required because without it Expression will take
+    /// precedence over it and throw error for whole list.
+    bool preorder(const IR::ListExpression *) override { return true; }
+    bool preorder(const IR::Expression *expr) override {
+        ::error(ErrorType::ERR_UNSUPPORTED,
+                "%1%: unsupported expression, expected a named instance", expr);
+        return false;
+    }
+
+    void visitTableProperty(cstring propertyName) {
+        auto property = table->table->container->properties->getProperty(propertyName);
+        if (property != nullptr) property->apply(*this);
+    }
 };
 
 }  // namespace EBPF

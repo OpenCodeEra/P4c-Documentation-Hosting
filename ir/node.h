@@ -40,6 +40,8 @@ class JsonObject;
 
 namespace IR {
 
+using namespace P4::literals;
+
 class Node;
 class Annotation;  // IWYU pragma: keep
 template <class T>
@@ -108,8 +110,6 @@ class Node : public virtual INode {
  protected:
     static int currentId;
     void traceVisit(const char *visitor) const;
-    virtual void visit_children(Visitor &) {}
-    virtual void visit_children(Visitor &) const {}
     friend class ::Visitor;
     friend class ::Inspector;
     friend class ::Modifier;
@@ -140,8 +140,8 @@ class Node : public virtual INode {
     const Node *getNode() const final { return this; }
     Node *getNode() final { return this; }
     Util::SourceInfo getSourceInfo() const override { return srcInfo; }
-    cstring node_type_name() const override { return "Node"; }
-    static cstring static_type_name() { return "Node"; }
+    cstring node_type_name() const override { return "Node"_cs; }
+    static cstring static_type_name() { return "Node"_cs; }
     virtual int num_children() { return 0; }
     explicit Node(JSONLoader &json);
     cstring toString() const override { return node_type_name(); }
@@ -158,6 +158,8 @@ class Node : public virtual INode {
     virtual bool operator==(const CLASS &) const { return false; }
     IRNODE_ALL_SUBCLASSES(DEFINE_OPEQ_FUNC)
 #undef DEFINE_OPEQ_FUNC
+    virtual void visit_children(Visitor &) {}
+    virtual void visit_children(Visitor &) const {}
 
     bool operator!=(const Node &n) const { return !operator==(n); }
 

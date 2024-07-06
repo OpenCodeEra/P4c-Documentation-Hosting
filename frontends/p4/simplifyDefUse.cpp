@@ -16,8 +16,7 @@ limitations under the License.
 
 #include "simplifyDefUse.h"
 
-#include <absl/container/flat_hash_set.h>
-
+#include "absl/container/flat_hash_set.h"
 #include "frontends/p4/def_use.h"
 #include "frontends/p4/methodInstance.h"
 #include "frontends/p4/parserCallGraph.h"
@@ -949,6 +948,26 @@ class FindUninitialized : public Inspector {
         return setCurrent(statement);
     }
 
+    bool preorder(const IR::ForInStatement *statement) override {
+        Log::TempIndent indent;
+        LOG3("FU Visiting " << dbp(statement) << " " << statement << indent);
+        if (!unreachable) {
+            visit(statement->collection, "collection");
+            lhs = true;
+            visit(statement->decl, "decl");
+            visit(statement->ref, "ref");
+            for (auto *l : *headerDefs->getStorageLocation(statement->ref))
+                headerDefs->setValueToStorage(l, TernaryBool::Yes);
+            lhs = false;
+            currentPoint.assign(context, statement->ref);
+            visit(statement->body);
+            unreachable = false;
+        } else {
+            LOG3("Unreachable");
+        }
+        return setCurrent(statement);
+    }
+
     ////////////////// Expressions
 
     bool preorder(const IR::Literal *expression) override {
@@ -1016,12 +1035,10 @@ class FindUninitialized : public Inspector {
             // This could happen if we are writing to an array element
             // with an unknown index.
             auto type = typeMap->getType(expression, true);
-            cstring message;
-            if (type->is<IR::Type_Base>())
-                message = "%1% may be uninitialized";
-            else
-                message = "%1% may not be completely initialized";
-            warn(ErrorType::WARN_UNINITIALIZED_USE, message, expression);
+            warn(ErrorType::WARN_UNINITIALIZED_USE,
+                 type->is<IR::Type_Base>() ? "%1% may be uninitialized"
+                                           : "%1% may not be completely initialized",
+                 expression);
         }
 
         hasUses->add(points);

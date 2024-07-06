@@ -82,17 +82,11 @@ bool EBPFProgram::build() {
     return true;
 }
 
-void EBPFProgram::emitC(CodeBuilder *builder, cstring header) {
+void EBPFProgram::emitC(CodeBuilder *builder, const std::filesystem::path &header) {
     emitGeneratedComment(builder);
 
-    // Find the last occurrence of a folder slash (Linux only)
-    const char *header_stripped = header.findlast('/');
-    if (header_stripped)
-        // Remove the path from the header
-        builder->appendFormat("#include \"%s\"", header_stripped + 1);
-    else
-        // There is no prepended path, just include the header
-        builder->appendFormat("#include \"%s\"", header.c_str());
+    // Remove the path from the header
+    builder->appendFormat("#include \"%s\"", header.filename());
     builder->newline();
 
     builder->target->emitIncludes(builder);
@@ -105,11 +99,11 @@ void EBPFProgram::emitC(CodeBuilder *builder, cstring header) {
     builder->emitIndent();
     // Use different section name for XDP - this is used by the runtime test framework.
     if (model.arch == ModelArchitecture::XdpSwitch)
-        builder->target->emitCodeSection(builder, "xdp");
+        builder->target->emitCodeSection(builder, "xdp"_cs);
     else
-        builder->target->emitCodeSection(builder, "prog");
+        builder->target->emitCodeSection(builder, "prog"_cs);
     builder->emitIndent();
-    builder->target->emitMain(builder, functionName, model.CPacketName.str());
+    builder->target->emitMain(builder, functionName, model.CPacketName.toString());
     builder->blockStart();
 
     emitHeaderInstances(builder);
@@ -162,7 +156,7 @@ void EBPFProgram::emitGeneratedComment(CodeBuilder *builder) {
     builder->newline();
 }
 
-void EBPFProgram::emitH(CodeBuilder *builder, cstring) {
+void EBPFProgram::emitH(CodeBuilder *builder, const std::filesystem::path &) {
     emitGeneratedComment(builder);
     builder->appendLine("#ifndef _P4_GEN_HEADER_");
     builder->appendLine("#define _P4_GEN_HEADER_");
@@ -196,6 +190,24 @@ void EBPFProgram::emitTypes(CodeBuilder *builder) {
             type->emit(builder);
             builder->newline();
         }
+        // TODO: This code is disabled until we fix stability issues in Ubuntu 20.04.
+        // For an unclear reason we can not use definitions and declarations for eBPF externs there.
+        // All externs need to be defined as static inline, which clashes with these definitions.
+        // Context: https://github.com/p4lang/p4c/pull/4644
+        // if (const auto *method = d->to<IR::Method>()) {
+        //     if (!method->srcInfo.isValid()) {
+        //         continue;
+        //     }
+        //     // Ignore methods originating from core.p4 and ubpf_model.p4 because they are already
+        //     // defined.
+        //     // TODO: Maybe we should still generate declarations for these methods?
+        //     if (isLibraryMethod(method->controlPlaneName())) {
+        //         continue;
+        //     }
+        //     EBPFMethodDeclaration methodInstance(method);
+        //     methodInstance.emit(builder);
+        //     builder->newline();
+        // }
     }
 }
 
@@ -262,14 +274,14 @@ void EBPFProgram::emitLocalVariables(CodeBuilder *builder) {
 
     builder->emitIndent();
     builder->appendFormat("void* %s = %s;", packetStartVar.c_str(),
-                          builder->target->dataOffset(model.CPacketName.str()).c_str());
+                          builder->target->dataOffset(model.CPacketName.toString()).c_str());
     builder->newline();
     builder->emitIndent();
     builder->appendFormat("u8* %s = %s;", headerStartVar.c_str(), packetStartVar.c_str());
     builder->newline();
     builder->emitIndent();
     builder->appendFormat("void* %s = %s;", packetEndVar.c_str(),
-                          builder->target->dataEnd(model.CPacketName.str()).c_str());
+                          builder->target->dataEnd(model.CPacketName.toString()).c_str());
     builder->newline();
 
     if (model.arch == ModelArchitecture::EbpfFilter) {
@@ -297,7 +309,7 @@ void EBPFProgram::emitLocalVariables(CodeBuilder *builder) {
 
     builder->emitIndent();
     builder->appendFormat("u32 %s = %s", lengthVar.c_str(),
-                          builder->target->dataLength(model.CPacketName.str()).c_str());
+                          builder->target->dataLength(model.CPacketName.toString()).c_str());
     builder->endOfStatement(true);
 }
 
@@ -330,6 +342,19 @@ void EBPFProgram::emitPipeline(CodeBuilder *builder) {
         builder->target->emitTraceMessage(builder, "Control: packet processing finished, pass=%d",
                                           1, control->accept->name.name.c_str());
     }
+}
+
+bool EBPFProgram::isLibraryMethod(cstring methodName) {
+    static std::set<cstring> DEFAULT_METHODS = {"static_assert"_cs, "verify"_cs};
+    if (DEFAULT_METHODS.find(methodName) != DEFAULT_METHODS.end() && options.target != "xdp") {
+        return true;
+    }
+
+    static std::set<cstring> XDP_METHODS = {
+        "ebpf_ipv4_checksum"_cs,    "csum_replace2"_cs,    "csum_replace4"_cs,
+        "BPF_PERF_EVENT_OUTPUT"_cs, "BPF_KTIME_GET_NS"_cs,
+    };
+    return XDP_METHODS.find(methodName) != XDP_METHODS.end();
 }
 
 }  // namespace EBPF

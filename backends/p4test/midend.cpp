@@ -60,6 +60,7 @@ limitations under the License.
 #include "midend/simplifySelectCases.h"
 #include "midend/simplifySelectList.h"
 #include "midend/tableHit.h"
+#include "midend/unrollLoops.h"
 
 namespace P4Test {
 
@@ -81,6 +82,7 @@ MidEnd::MidEnd(CompilerOptions &options, std::ostream *outStream) {
     setName("MidEnd");
 
     auto v1controls = new std::set<cstring>();
+    auto defUse = new P4::ComputeDefUse;
 
     addPasses(
         {options.ndebug ? new P4::RemoveAssertAssume(&refMap, &typeMap) : nullptr,
@@ -91,19 +93,19 @@ MidEnd::MidEnd(CompilerOptions &options, std::ostream *outStream) {
          new P4::SimplifyKey(
              &refMap, &typeMap,
              new P4::OrPolicy(new P4::IsValid(&refMap, &typeMap), new P4::IsLikeLeftValue())),
-         new P4::RemoveExits(&refMap, &typeMap),
+         new P4::RemoveExits(&typeMap),
          new P4::ConstantFolding(&refMap, &typeMap),
          new P4::SimplifySelectCases(&refMap, &typeMap, false),  // non-constant keysets
          new P4::ExpandLookahead(&refMap, &typeMap),
          new P4::ExpandEmit(&refMap, &typeMap),
          new P4::HandleNoMatch(&refMap),
          new P4::SimplifyParsers(&refMap),
-         new P4::StrengthReduction(&refMap, &typeMap),
+         new P4::StrengthReduction(&typeMap),
          new P4::EliminateTuples(&refMap, &typeMap),
          new P4::SimplifyComparisons(&refMap, &typeMap),
          new P4::CopyStructures(&refMap, &typeMap, false),
          new P4::NestedStructs(&refMap, &typeMap),
-         new P4::StrengthReduction(&refMap, &typeMap),
+         new P4::StrengthReduction(&typeMap),
          new P4::SimplifySelectList(&refMap, &typeMap),
          new P4::RemoveSelectBooleans(&refMap, &typeMap),
          new P4::FlattenHeaders(&refMap, &typeMap),
@@ -117,15 +119,22 @@ MidEnd::MidEnd(CompilerOptions &options, std::ostream *outStream) {
              new P4::LocalCopyPropagation(&refMap, &typeMap),
              new P4::ConstantFolding(&refMap, &typeMap),
          }),
-         new P4::StrengthReduction(&refMap, &typeMap),
+         new P4::StrengthReduction(&typeMap),
          new P4::MoveDeclarations(),  // more may have been introduced
-         new P4::SimplifyControlFlow(&refMap, &typeMap),
+         new P4::SimplifyControlFlow(&typeMap),
          new P4::CompileTimeOperations(),
          new P4::TableHit(&refMap, &typeMap),
          new P4::EliminateSwitch(&refMap, &typeMap),
          new P4::ResolveReferences(&refMap),
          new P4::TypeChecking(&refMap, &typeMap, true),  // update types before ComputeDefUse
-         new P4::ComputeDefUse,                          // present for testing
+         new PassRepeated({
+             defUse,
+             new P4::UnrollLoops(refMap, defUse),
+             new P4::LocalCopyPropagation(&refMap, &typeMap),
+             new P4::ConstantFolding(&refMap, &typeMap),
+             new P4::StrengthReduction(&typeMap),
+         }),
+         new P4::MoveDeclarations(),  // more may have been introduced
          evaluator,
          [v1controls, evaluator](const IR::Node *root) -> const IR::Node * {
              auto toplevel = evaluator->getToplevelBlock();
@@ -157,10 +166,10 @@ MidEnd::MidEnd(CompilerOptions &options, std::ostream *outStream) {
          evaluator,
          [this, evaluator]() { toplevel = evaluator->getToplevelBlock(); },
          new P4::FlattenHeaderUnion(&refMap, &typeMap, options.loopsUnrolling),
-         new P4::SimplifyControlFlow(&refMap, &typeMap),
+         new P4::SimplifyControlFlow(&typeMap),
          new P4::MidEndLast()});
     if (options.listMidendPasses) {
-        listPasses(*outStream, "\n");
+        listPasses(*outStream, cstring::newline);
         *outStream << std::endl;
         return;
     }

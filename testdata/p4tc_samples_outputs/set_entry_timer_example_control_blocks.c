@@ -96,7 +96,7 @@ if (/* hdr->ipv4.isValid() */
                     /* value */
                     struct MainControlImpl_ipv4_tbl_1_value *value = NULL;
                     /* perform lookup */
-                    act_bpf = bpf_p4tc_tbl_read(skb, &params, &key, sizeof(key));
+                    act_bpf = bpf_p4tc_tbl_read(skb, &params, sizeof(params), &key, sizeof(key));
                     value = (struct MainControlImpl_ipv4_tbl_1_value *)act_bpf;
                     if (value == NULL) {
                         /* miss; find default action */
@@ -116,7 +116,7 @@ if (/* hdr->ipv4.isValid() */
                                         .tblid = 1,
                                         .aging_ms = 2
                                     };
-                                    bpf_p4tc_entry_update(skb, &update_params, &key, sizeof(key), act_bpf);
+                                    bpf_p4tc_entry_update(skb, &update_params, sizeof(params), &key, sizeof(key));
                                 }
                                 break;
                             case MAINCONTROLIMPL_IPV4_TBL_1_ACT_MAINCONTROLIMPL_DEFAULT_ROUTE_DROP: 
@@ -151,7 +151,7 @@ if (/* hdr->ipv4.isValid() */
                     /* value */
                     struct MainControlImpl_ipv4_tbl_2_value *value = NULL;
                     /* perform lookup */
-                    act_bpf = bpf_p4tc_tbl_read(skb, &params, &key, sizeof(key));
+                    act_bpf = bpf_p4tc_tbl_read(skb, &params, sizeof(params), &key, sizeof(key));
                     value = (struct MainControlImpl_ipv4_tbl_2_value *)act_bpf;
                     if (value == NULL) {
                         /* miss; find default action */
@@ -171,7 +171,7 @@ if (/* hdr->ipv4.isValid() */
                                         .tblid = 2,
                                         .aging_ms = 2
                                     };
-                                    bpf_p4tc_entry_update(skb, &update_params, &key, sizeof(key), act_bpf);
+                                    bpf_p4tc_entry_update(skb, &update_params, sizeof(params), &key, sizeof(key));
                                 }
                                 break;
                             case MAINCONTROLIMPL_IPV4_TBL_2_ACT_MAINCONTROLIMPL_DROP: 
@@ -350,6 +350,7 @@ SEC("p4tc/main")
 int tc_ingress_func(struct __sk_buff *skb) {
     struct pna_global_metadata *compiler_meta__ = (struct pna_global_metadata *) skb->cb;
     if (compiler_meta__->pass_to_kernel == true) return TC_ACT_OK;
+    compiler_meta__->drop = false;
     if (!compiler_meta__->recirculated) {
         compiler_meta__->mark = 153;
         struct internal_metadata *md = (struct internal_metadata *)(unsigned long)skb->data_meta;

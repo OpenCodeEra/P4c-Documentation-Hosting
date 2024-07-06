@@ -28,6 +28,8 @@
 
 namespace P4Tools::P4Testgen::Bmv2 {
 
+using namespace P4::literals;
+
 static big_int checksum(Bmv2HashAlgorithm algo, const uint8_t *buf, size_t len) {
     // Pick a checksum according to the algorithm value.
     switch (algo) {
@@ -60,7 +62,7 @@ big_int Bmv2Concolic::computeChecksum(const std::vector<const IR::Expression *> 
         for (size_t idx = 1; idx < exprList.size(); idx++) {
             const auto *expr = exprList.at(idx);
             const auto *newWidth =
-                IR::getBitType(concatExpr->type->width_bits() + expr->type->width_bits());
+                IR::Type_Bits::get(concatExpr->type->width_bits() + expr->type->width_bits());
             concatExpr = new IR::Concat(newWidth, concatExpr, expr);
         }
 
@@ -71,8 +73,8 @@ big_int Bmv2Concolic::computeChecksum(const std::vector<const IR::Expression *> 
         if (remainder != 0) {
             auto fillWidth = CHUNK_SIZE - remainder;
             concatWidth += fillWidth;
-            const auto *remainderExpr = IR::getConstant(IR::getBitType(fillWidth), 0);
-            concatExpr = new IR::Concat(IR::getBitType(concatWidth), concatExpr, remainderExpr);
+            const auto *remainderExpr = IR::Constant::get(IR::Type_Bits::get(fillWidth), 0);
+            concatExpr = new IR::Concat(IR::Type_Bits::get(concatWidth), concatExpr, remainderExpr);
         }
         auto dataInt =
             IR::getBigIntFromLiteral(finalModel.evaluate(concatExpr, true, resolvedExpressions));
@@ -97,8 +99,8 @@ const ConcolicMethodImpls::ImplList Bmv2Concolic::BMV2_CONCOLIC_METHOD_IMPLS{
     /// int<W>) or varbits.
     /// @param T          Must be a type bit<W>
     /// @param M          Must be a type bit<W>
-    {"*method_hash",
-     {"result", "algo", "base", "data", "max"},
+    {"*method_hash"_cs,
+     {"result"_cs, "algo"_cs, "base"_cs, "data"_cs, "max"_cs},
      [](cstring /*concolicMethodName*/, const IR::ConcolicVariable *var,
         const ExecutionState & /*state*/, const Model &finalModel,
         ConcolicVariableMap *resolvedConcolicVariables) {
@@ -141,7 +143,8 @@ const ConcolicMethodImpls::ImplList Bmv2Concolic::BMV2_CONCOLIC_METHOD_IMPLS{
          // Assign a value to the @param result using the computed result
          if (const auto *checksumVarType = checksumVar->type->to<IR::Type_Bits>()) {
              // Overwrite any previous assignment or result.
-             (*resolvedConcolicVariables)[*var] = IR::getConstant(checksumVarType, computedResult);
+             (*resolvedConcolicVariables)[*var] =
+                 IR::Constant::get(checksumVarType, computedResult);
 
          } else {
              TESTGEN_UNIMPLEMENTED("Checksum output %1% of type %2% not supported", checksumVar,
@@ -162,8 +165,8 @@ const ConcolicMethodImpls::ImplList Bmv2Concolic::BMV2_CONCOLIC_METHOD_IMPLS{
      * ====================================================================================== */
     /// This method is almost equivalent to the hash method. Except that when the checksum output is
     /// out of bounds, this method assigns the maximum instead of using a modulo operation.
-    {"*method_checksum",
-     {"result", "algo", "data"},
+    {"*method_checksum"_cs,
+     {"result"_cs, "algo"_cs, "data"_cs},
      [](cstring /*concolicMethodName*/, const IR::ConcolicVariable *var,
         const ExecutionState & /*state*/, const Model &finalModel,
         ConcolicVariableMap *resolvedConcolicVariables) {
@@ -194,7 +197,8 @@ const ConcolicMethodImpls::ImplList Bmv2Concolic::BMV2_CONCOLIC_METHOD_IMPLS{
          // Assign a value to the @param result using the computed result
          if (checksumVarType->is<IR::Type_Bits>()) {
              // Overwrite any previous assignment or result.
-             (*resolvedConcolicVariables)[*var] = IR::getConstant(checksumVarType, computedResult);
+             (*resolvedConcolicVariables)[*var] =
+                 IR::Constant::get(checksumVarType, computedResult);
          } else {
              TESTGEN_UNIMPLEMENTED("Checksum output %1% of type %2% not supported", checksumVar,
                                    checksumVarType);
@@ -210,8 +214,8 @@ const ConcolicMethodImpls::ImplList Bmv2Concolic::BMV2_CONCOLIC_METHOD_IMPLS{
          }
      }},
 
-    {"*method_checksum_with_payload",
-     {"result", "algo", "data"},
+    {"*method_checksum_with_payload"_cs,
+     {"result"_cs, "algo"_cs, "data"_cs},
      [](cstring /*concolicMethodName*/, const IR::ConcolicVariable *var,
         const ExecutionState & /*state*/, const Model &finalModel,
         ConcolicVariableMap *resolvedConcolicVariables) {
@@ -248,7 +252,8 @@ const ConcolicMethodImpls::ImplList Bmv2Concolic::BMV2_CONCOLIC_METHOD_IMPLS{
          // Assign a value to the @param result using the computed result
          if (checksumVarType->is<IR::Type_Bits>()) {
              // Overwrite any previous assignment or result.
-             (*resolvedConcolicVariables)[*var] = IR::getConstant(checksumVarType, computedResult);
+             (*resolvedConcolicVariables)[*var] =
+                 IR::Constant::get(checksumVarType, computedResult);
          } else {
              TESTGEN_UNIMPLEMENTED("Checksum output %1% of type %2% not supported", checksumVar,
                                    checksumVarType);

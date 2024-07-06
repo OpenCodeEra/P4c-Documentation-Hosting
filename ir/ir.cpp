@@ -41,19 +41,19 @@ limitations under the License.
 
 namespace IR {
 
-const cstring ParserState::accept = "accept";
-const cstring ParserState::reject = "reject";
-const cstring ParserState::start = "start";
-const cstring ParserState::verify = "verify";
+const cstring ParserState::accept = "accept"_cs;
+const cstring ParserState::reject = "reject"_cs;
+const cstring ParserState::start = "start"_cs;
+const cstring ParserState::verify = "verify"_cs;
 
-const cstring TableProperties::actionsPropertyName = "actions";
-const cstring TableProperties::keyPropertyName = "key";
-const cstring TableProperties::defaultActionPropertyName = "default_action";
-const cstring TableProperties::entriesPropertyName = "entries";
-const cstring TableProperties::sizePropertyName = "size";
-const cstring IApply::applyMethodName = "apply";
-const cstring P4Program::main = "main";
-const cstring Type_Error::error = "error";
+const cstring TableProperties::actionsPropertyName = "actions"_cs;
+const cstring TableProperties::keyPropertyName = "key"_cs;
+const cstring TableProperties::defaultActionPropertyName = "default_action"_cs;
+const cstring TableProperties::entriesPropertyName = "entries"_cs;
+const cstring TableProperties::sizePropertyName = "size"_cs;
+const cstring IApply::applyMethodName = "apply"_cs;
+const cstring P4Program::main = "main"_cs;
+const cstring Type_Error::error = "error"_cs;
 
 long IR::Declaration::nextId = 0;
 long IR::This::nextId = 0;
@@ -211,6 +211,25 @@ const Type_Method *P4Table::getApplyMethodType() const {
 }
 
 const Type_Method *Type_Table::getApplyMethodType() const { return table->getApplyMethodType(); }
+
+void BlockStatement::append(const StatOrDecl *stmt) {
+    srcInfo += stmt->srcInfo;
+    if (auto bs = stmt->to<BlockStatement>()) {
+        bool merge = true;
+        for (auto annot : bs->annotations->annotations) {
+            auto a = annotations->getSingle(annot->name);
+            if (!a || !a->equiv(*annot)) {
+                merge = false;
+                break;
+            }
+        }
+        if (merge) {
+            components.append(bs->components);
+            return;
+        }
+    }
+    components.push_back(stmt);
+}
 
 void Block::setValue(const Node *node, const CompileTimeValue *value) {
     CHECK_NULL(node);

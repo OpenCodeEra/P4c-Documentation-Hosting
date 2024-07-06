@@ -173,15 +173,17 @@ bool ToP4::preorder(const IR::P4Program *program) {
                         program->apply(g);
                         builder.append("#define V1MODEL_VERSION ");
                         builder.append(g.version);
-                        builder.appendLine("");
+                        builder.newline();
                     }
                     builder.append("#include <");
                     builder.append(p);
-                    builder.appendLine(">");
+                    builder.append(">");
+                    builder.newline();
                 } else {
                     builder.append("#include \"");
                     builder.append(sourceFile);
-                    builder.appendLine("\"");
+                    builder.append("\"");
+                    builder.newline();
                 }
                 includesEmitted.emplace(sourceFile);
             }
@@ -872,8 +874,8 @@ bool ToP4::preorder(const IR::SelectExpression *e) {
 bool ToP4::preorder(const IR::ListExpression *e) {
     cstring start, end;
     if (listTerminators.empty()) {
-        start = "{ ";
-        end = " }";
+        start = "{ "_cs;
+        end = " }"_cs;
     } else {
         start = listTerminators.back().start;
         end = listTerminators.back().end;
@@ -1131,6 +1133,20 @@ bool ToP4::preorder(const IR::BlockStatement *s) {
     return false;
 }
 
+bool ToP4::preorder(const IR::BreakStatement *) {
+    dump(1);
+    builder.append("break");
+    builder.endOfStatement();
+    return false;
+}
+
+bool ToP4::preorder(const IR::ContinueStatement *) {
+    dump(1);
+    builder.append("continue");
+    builder.endOfStatement();
+    return false;
+}
+
 bool ToP4::preorder(const IR::ExitStatement *) {
     dump(1);
     builder.append("exit");
@@ -1192,6 +1208,80 @@ bool ToP4::preorder(const IR::IfStatement *s) {
     return false;
 }
 
+bool ToP4::preorder(const IR::ForStatement *s) {
+    dump(2);
+    if (!s->annotations->annotations.empty()) {
+        visit(s->annotations);
+        builder.spc();
+    }
+    builder.append("for (");
+    bool first = true;
+    for (auto *d : s->init) {
+        if (!first) builder.append(", ");
+        builder.supressStatementSemi();
+        visit(d, "init");
+        first = false;
+    }
+    builder.append("; ");
+    visit(s->condition, "condition");
+    builder.append("; ");
+    first = true;
+    for (auto *e : s->updates) {
+        if (e->is<IR::EmptyStatement>()) continue;
+        if (!first) builder.append(", ");
+        builder.supressStatementSemi();
+        visit(e, "updates");
+        first = false;
+    }
+    builder.append(") ");
+    if (!s->body->is<IR::BlockStatement>()) {
+        builder.append("{");
+        builder.increaseIndent();
+        builder.newline();
+        builder.emitIndent();
+    }
+    visit(s->body, "body");
+    if (!s->body->is<IR::BlockStatement>()) {
+        builder.newline();
+        builder.decreaseIndent();
+        builder.emitIndent();
+        builder.append("}");
+    }
+    return false;
+}
+
+bool ToP4::preorder(const IR::ForInStatement *s) {
+    dump(2);
+    if (!s->annotations->annotations.empty()) {
+        visit(s->annotations);
+        builder.spc();
+    }
+    builder.append("for (");
+    if (s->decl) {
+        builder.supressStatementSemi();
+        visit(s->decl, "decl");
+    } else {
+        visit(s->ref, "ref");
+    }
+    builder.append(" in ");
+    visit(s->collection);
+    builder.append(") ");
+    if (!s->body->is<IR::BlockStatement>()) {
+        builder.append("{");
+        builder.increaseIndent();
+        builder.newline();
+        builder.emitIndent();
+    }
+    visit(s->body, "body");
+    if (!s->body->is<IR::BlockStatement>()) {
+        builder.newline();
+        builder.decreaseIndent();
+        builder.emitIndent();
+        builder.append("}");
+    }
+    return false;
+}
+
 bool ToP4::preorder(const IR::MethodCallStatement *s) {
     dump(3);
     visit(s->methodCall);
@@ -1237,8 +1327,8 @@ bool ToP4::preorder(const IR::Annotations *a) {
 bool ToP4::preorder(const IR::Annotation *a) {
     builder.append("@");
     builder.append(a->name);
-    char open = a->structured ? '[' : '(';
-    char close = a->structured ? ']' : ')';
+    const char *open = a->structured ? "[" : "(";
+    const char *close = a->structured ? "]" : ")";
     if (!a->expr.empty()) {
         builder.append(open);
         setVecSep(", ");

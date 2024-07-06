@@ -19,14 +19,13 @@ and limitations under the License.
 
 #include "backends/ebpf/ebpfOptions.h"
 #include "frontends/common/options.h"
-#include "lib/cstring.h"
 
 namespace TC {
 
 class TCOptions : public CompilerOptions {
  public:
     // file to output to
-    cstring outputFolder = nullptr;
+    std::filesystem::path outputFolder;
     bool DebugOn = false;
     // tracing eBPF code execution
     bool emitTraceMessages = false;

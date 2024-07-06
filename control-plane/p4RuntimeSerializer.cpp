@@ -479,18 +479,20 @@ class P4RuntimeAnalyzer {
 
         // I considered using Protobuf reflection, but it didn't really make the
         // code less verbose, and it certainly didn't make it easier to read.
-        dupCnt += checkForDuplicatesOfSameType(p4Info->tables(), "table", &ids);
-        dupCnt += checkForDuplicatesOfSameType(p4Info->actions(), "action", &ids);
-        dupCnt += checkForDuplicatesOfSameType(p4Info->action_profiles(), "action profile", &ids);
-        dupCnt += checkForDuplicatesOfSameType(p4Info->counters(), "counter", &ids);
-        dupCnt += checkForDuplicatesOfSameType(p4Info->direct_counters(), "direct counter", &ids);
-        dupCnt += checkForDuplicatesOfSameType(p4Info->meters(), "meter", &ids);
-        dupCnt += checkForDuplicatesOfSameType(p4Info->direct_meters(), "direct meter", &ids);
+        dupCnt += checkForDuplicatesOfSameType(p4Info->tables(), "table"_cs, &ids);
+        dupCnt += checkForDuplicatesOfSameType(p4Info->actions(), "action"_cs, &ids);
+        dupCnt +=
+            checkForDuplicatesOfSameType(p4Info->action_profiles(), "action profile"_cs, &ids);
+        dupCnt += checkForDuplicatesOfSameType(p4Info->counters(), "counter"_cs, &ids);
+        dupCnt +=
+            checkForDuplicatesOfSameType(p4Info->direct_counters(), "direct counter"_cs, &ids);
+        dupCnt += checkForDuplicatesOfSameType(p4Info->meters(), "meter"_cs, &ids);
+        dupCnt += checkForDuplicatesOfSameType(p4Info->direct_meters(), "direct meter"_cs, &ids);
         dupCnt += checkForDuplicatesOfSameType(p4Info->controller_packet_metadata(),
-                                               "controller packet metadata", &ids);
-        dupCnt += checkForDuplicatesOfSameType(p4Info->value_sets(), "value set", &ids);
-        dupCnt += checkForDuplicatesOfSameType(p4Info->registers(), "register", &ids);
-        dupCnt += checkForDuplicatesOfSameType(p4Info->digests(), "digest", &ids);
+                                               "controller packet metadata"_cs, &ids);
+        dupCnt += checkForDuplicatesOfSameType(p4Info->value_sets(), "value set"_cs, &ids);
+        dupCnt += checkForDuplicatesOfSameType(p4Info->registers(), "register"_cs, &ids);
+        dupCnt += checkForDuplicatesOfSameType(p4Info->digests(), "digest"_cs, &ids);
 
         for (const auto &externType : p4Info->externs()) {
             dupCnt += checkForDuplicatesOfSameType(externType.instances(),
@@ -601,7 +603,7 @@ class P4RuntimeAnalyzer {
         auto id = symbols.getId(P4RuntimeSymbolType::P4RT_CONTROLLER_HEADER(), name);
         auto annotations = type->to<IR::IAnnotated>();
 
-        auto controllerAnnotation = type->getAnnotation("controller_header");
+        auto controllerAnnotation = type->getAnnotation("controller_header"_cs);
         CHECK_NULL(controllerAnnotation);
 
         auto nameConstant = controllerAnnotation->expr[0]->to<IR::StringLiteral>();
@@ -683,8 +685,8 @@ class P4RuntimeAnalyzer {
             action_ref->set_id(id);
             addAnnotations(action_ref, action.annotations);
             // set action ref scope
-            auto isTableOnly = (action.annotations->getAnnotation("tableonly") != nullptr);
-            auto isDefaultOnly = (action.annotations->getAnnotation("defaultonly") != nullptr);
+            auto isTableOnly = (action.annotations->getAnnotation("tableonly"_cs) != nullptr);
+            auto isDefaultOnly = (action.annotations->getAnnotation("defaultonly"_cs) != nullptr);
             if (isTableOnly && isDefaultOnly) {
                 ::error(ErrorType::ERR_INVALID,
                         "Table '%1%' has an action reference ('%2%') which is annotated "
@@ -951,9 +953,43 @@ class P4RuntimeAnalyzer {
             }
         }
 
+        // Parse `@platform_property` annotation into the PkgInfo.
+        for (auto *annotation : decl->getAnnotations()->annotations) {
+            if (annotation->name != "platform_property") continue;
+            auto *platform_properties = pkginfo->mutable_platform_properties();
+            for (auto *kv : annotation->kv) {
+                auto name = kv->name.name;
+                auto setInt32Field = [kv, &platform_properties](cstring fName) {
+                    auto *v = kv->expression->to<IR::Constant>();
+                    if (v == nullptr) {
+                        ::error(ErrorType::ERR_UNSUPPORTED,
+                                "Value for '%1%' key in @platform_property annotation is not an "
+                                "integer",
+                                kv);
+                        return;
+                    }
+                    // use Protobuf reflection library to minimize code duplication.
+                    auto *descriptor = platform_properties->GetDescriptor();
+                    auto *f = descriptor->FindFieldByName(static_cast<std::string>(fName));
+                    platform_properties->GetReflection()->SetInt32(platform_properties, f,
+                                                                   static_cast<int32_t>(v->value));
+                };
+                if (name == "multicast_group_table_size" ||
+                    name == "multicast_group_table_total_replicas" ||
+                    name == "multicast_group_table_max_replicas_per_entry") {
+                    setInt32Field(name);
+                } else {
+                    ::warning(ErrorType::WARN_UNKNOWN,
+                              "Unknown key name '%1%' in @platform_property annotation", name);
+                }
+            }
+        }
+
         // add other annotations on the P4 package to the message. @pkginfo is
         // ignored using the unary predicate argument to addAnnotations.
-        addAnnotations(pkginfo, decl, [](cstring name) { return name == "pkginfo"; });
+        addAnnotations(pkginfo, decl, [](cstring name) {
+            return name == "pkginfo" || name == "platform_property";
+        });
 
         addDocumentation(pkginfo, decl);
     }
@@ -1046,7 +1082,7 @@ class P4RuntimeEntriesConverter {
                 }
             }
 
-            auto priorityAnnotation = e->getAnnotation("priority");
+            auto priorityAnnotation = e->getAnnotation("priority"_cs);
             if (priorityAnnotation != nullptr) {
                 ::warning(ErrorType::WARN_DEPRECATED,
                           "The @priority annotation on %1% is not part of the P4 specification, "
@@ -1493,34 +1529,28 @@ void P4RuntimeAPI::serializeEntriesTo(std::ostream *destination, P4RuntimeFormat
 
 static bool parseFileNames(cstring fileNameVector, std::vector<cstring> &files,
                            std::vector<P4::P4RuntimeFormat> &formats) {
-    for (auto current = fileNameVector; current;) {
+    // FIXME: Logic here shoule be refactored. Lots of cstring copies everywhere.
+    for (auto current = fileNameVector; !current.isNullOrEmpty();) {
         cstring name = current;
         const char *comma = current.find(',');
         if (comma != nullptr) {
             name = current.before(comma);
-            current = comma + 1;
+            current = cstring(comma + 1);
         } else {
-            current = cstring();
+            current = cstring::empty;
         }
         files.push_back(name);
 
-        if (cstring suffix = name.findlast('.')) {
-            if (suffix == ".json") {
-                formats.push_back(P4::P4RuntimeFormat::JSON);
-            } else if (suffix == ".bin") {
-                formats.push_back(P4::P4RuntimeFormat::BINARY);
-            } else if (suffix == ".txtpb") {
-                formats.push_back(P4::P4RuntimeFormat::TEXT_PROTOBUF);
-            } else if (suffix == ".txt") {
-                ::warning(ErrorType::WARN_DEPRECATED,
-                          ".txt format is being deprecated; use .txtpb instead");
-                formats.push_back(P4::P4RuntimeFormat::TEXT);
-            } else {
-                ::error(ErrorType::ERR_UNKNOWN,
-                        "%1%: Could not detect p4runtime info file format from file suffix %2%",
-                        name, suffix);
-                return false;
-            }
+        if (name.endsWith(".json")) {
+            formats.push_back(P4::P4RuntimeFormat::JSON);
+        } else if (name.endsWith(".bin")) {
+            formats.push_back(P4::P4RuntimeFormat::BINARY);
+        } else if (name.endsWith(".txtpb")) {
+            formats.push_back(P4::P4RuntimeFormat::TEXT_PROTOBUF);
+        } else if (name.endsWith(".txt")) {
+            ::warning(ErrorType::WARN_DEPRECATED,
+                      ".txt format is being deprecated; use .txtpb instead");
+            formats.push_back(P4::P4RuntimeFormat::TEXT);
         } else {
             ::error(ErrorType::ERR_UNKNOWN,
                     "%1%: unknown file kind; known suffixes are .bin, .txt, .json, and .txtpb",
@@ -1551,6 +1581,7 @@ void P4RuntimeSerializer::serializeP4RuntimeIfRequired(const IR::P4Program *prog
 
 void P4RuntimeSerializer::serializeP4RuntimeIfRequired(const P4RuntimeAPI &p4Runtime,
                                                        const CompilerOptions &options) {
+    // FIXME: get rid of cstring here
     std::vector<cstring> files;
     std::vector<P4::P4RuntimeFormat> formats;
 
@@ -1564,7 +1595,7 @@ void P4RuntimeSerializer::serializeP4RuntimeIfRequired(const P4RuntimeAPI &p4Run
         for (unsigned i = 0; i < files.size(); i++) {
             cstring file = files.at(i);
             P4::P4RuntimeFormat format = formats.at(i);
-            std::ostream *out = openFile(file, false);
+            std::ostream *out = openFile(file.string(), false);
             if (!out) {
                 ::error(ErrorType::ERR_IO, "Couldn't open P4Runtime API file: %1%", file);
                 continue;
@@ -1586,7 +1617,7 @@ void P4RuntimeSerializer::serializeP4RuntimeIfRequired(const P4RuntimeAPI &p4Run
         for (unsigned i = 0; i < files.size(); i++) {
             cstring file = files.at(i);
             P4::P4RuntimeFormat format = formats.at(i);
-            std::ostream *out = openFile(file, false);
+            std::ostream *out = openFile(file.string(), false);
             if (!out) {
                 ::error(ErrorType::ERR_IO, "Couldn't open P4Runtime static entries file: %1%",
                         options.p4RuntimeEntriesFile);
@@ -1598,10 +1629,10 @@ void P4RuntimeSerializer::serializeP4RuntimeIfRequired(const P4RuntimeAPI &p4Run
 }
 
 P4RuntimeSerializer::P4RuntimeSerializer() {
-    registerArch("v1model", new ControlPlaneAPI::Standard::V1ModelArchHandlerBuilder());
-    registerArch("psa", new ControlPlaneAPI::Standard::PSAArchHandlerBuilder());
-    registerArch("pna", new ControlPlaneAPI::Standard::PNAArchHandlerBuilder());
-    registerArch("ubpf", new ControlPlaneAPI::Standard::UBPFArchHandlerBuilder());
+    registerArch("v1model"_cs, new ControlPlaneAPI::Standard::V1ModelArchHandlerBuilder());
+    registerArch("psa"_cs, new ControlPlaneAPI::Standard::PSAArchHandlerBuilder());
+    registerArch("pna"_cs, new ControlPlaneAPI::Standard::PNAArchHandlerBuilder());
+    registerArch("ubpf"_cs, new ControlPlaneAPI::Standard::UBPFArchHandlerBuilder());
 }
 
 P4RuntimeSerializer *P4RuntimeSerializer::get() {
@@ -1615,7 +1646,7 @@ cstring P4RuntimeSerializer::resolveArch(const CompilerOptions &options) {
     } else if (options.arch != nullptr) {
         return options.arch;
     } else {
-        return "v1model";
+        return "v1model"_cs;
     }
 }
 

@@ -67,76 +67,48 @@ macro (p4c_add_library name symbol var)
   endif()
 endmacro(p4c_add_library)
 
-# Add files with the appropriate path to the list of cpplint-linted files.
-function(add_cpplint_files dir filelist)
+# Utility function which adds @param filelist to a global list of ${label}-files
+function(add_files dir filelist label)
   if (NOT filelist)
     message(WARNING "Input file list is empty. Returning.")
     return()
   endif()
   # Initialize an empty list.
-  set (__cpplintFileList "")
+  set (__FileList "")
   foreach(__f ${filelist})
     string(REGEX MATCH "^/.*" abs_path "${__f}")
     if (NOT ${abs_path} EQUAL "")
-      list (APPEND __cpplintFileList "${__f}")
+      list (APPEND __FileList "${__f}")
     else()
-      list (APPEND __cpplintFileList "${dir}/${__f}")
+      list (APPEND __FileList "${dir}/${__f}")
     endif()
   endforeach(__f)
 
-  # Get the global cpplint property and append to it.
-  get_property(CPPLINT_FILES GLOBAL PROPERTY cpplint-files)
-  list (APPEND CPPLINT_FILES "${__cpplintFileList}")
-  list(REMOVE_DUPLICATES CPPLINT_FILES)
-  set_property(GLOBAL PROPERTY cpplint-files "${CPPLINT_FILES}")
+  # Get the global label property and append to it.
+  get_property(${label}_FILES GLOBAL PROPERTY ${label}-files)
+  list (APPEND ${label}_FILES "${__FileList}")
+  list(REMOVE_DUPLICATES ${label}_FILES)
+  set_property(GLOBAL PROPERTY ${label}-files "${${label}_FILES}")
+endfunction(add_files)
+
+# Add files with the appropriate path to the list of cpplint-linted files.
+function(add_cpplint_files dir filelist)
+  add_files(${dir} "${filelist}" CPPLINT)
 endfunction(add_cpplint_files)
 
 # Add files with the appropriate path to the list of clang-format-linted files.
 function(add_clang_format_files dir filelist)
-  if (NOT filelist)
-    message(WARNING "Input file list is empty. Returning.")
-    return()
-  endif()
-  # Initialize an empty list.
-  set (__clangFormatFileList "")
-  foreach(__f ${filelist})
-    string(REGEX MATCH "^/.*" abs_path "${__f}")
-    if (NOT ${abs_path} EQUAL "")
-      list (APPEND __clangFormatFileList "${__f}")
-    else()
-      list (APPEND __clangFormatFileList "${dir}/${__f}")
-    endif()
-  endforeach(__f)
-
-  # Get the global clang-format property and append to it.
-  get_property(CLANG_FORMAT_FILES GLOBAL PROPERTY clang-format-files)
-  list (APPEND CLANG_FORMAT_FILES "${__clangFormatFileList}")
-  list(REMOVE_DUPLICATES CLANG_FORMAT_FILES)
-  set_property(GLOBAL PROPERTY clang-format-files "${CLANG_FORMAT_FILES}")
+  add_files(${dir} "${filelist}" CLANG_FORMAT)
 endfunction(add_clang_format_files)
+
+# Add files with the appropriate path to the list of clang-tidy-linted files.
+function(add_clang_tidy_files dir filelist)
+  add_files(${dir} "${filelist}" CLANG_TIDY)
+endfunction(add_clang_tidy_files)
 
 # Add files with the appropriate path to the list of black-linted files.
 function(add_black_files dir filelist)
-  if (NOT filelist)
-    message(WARNING "Input file list is empty. Returning.")
-    return()
-  endif()
-  # Initialize an empty list.
-  set (__blackFileList "")
-  foreach(__f ${filelist})
-    string(REGEX MATCH "^/.*" abs_path "${__f}")
-    if (NOT ${abs_path} EQUAL "")
-      list (APPEND __blackFileList "${__f}")
-    else()
-      list (APPEND __blackFileList "${dir}/${__f}")
-    endif()
-  endforeach(__f)
-
-  # Get the global clang-format property and append to it.
-  get_property(BLACK_FILES GLOBAL PROPERTY black-files)
-  list (APPEND BLACK_FILES "${__blackFileList}")
-  list(REMOVE_DUPLICATES BLACK_FILES)
-  set_property(GLOBAL PROPERTY black-files "${BLACK_FILES}")
+  add_files(${dir} "${filelist}" BLACK)
 endfunction(add_black_files)
 
 macro(p4c_test_set_name name tag alias)
@@ -433,3 +405,18 @@ macro(fetchcontent_makeavailable_but_exclude_install content)
     add_subdirectory(${${content}_SOURCE_DIR} ${${content}_BINARY_DIR} EXCLUDE_FROM_ALL)
   endif()
 endmacro(fetchcontent_makeavailable_but_exclude_install)
+
+# Collect all currently added targets in all subdirectories
+#
+# Parameters: - _result the list containing all found targets - _dir root directory to start
+# looking from
+# Sourced from https://stackoverflow.com/a/60232044
+function(get_all_targets _result _dir)
+  get_property(_subdirs DIRECTORY "${_dir}" PROPERTY SUBDIRECTORIES)
+  foreach(_subdir IN LISTS _subdirs)
+    get_all_targets(${_result} "${_subdir}")
+  endforeach()
+
+  get_directory_property(_sub_targets DIRECTORY "${_dir}" BUILDSYSTEM_TARGETS)
+  set(${_result} ${${_result}} ${_sub_targets} PARENT_SCOPE)
+endfunction()

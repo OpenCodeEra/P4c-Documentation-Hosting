@@ -17,12 +17,17 @@ and limitations under the License.
 #ifndef BACKENDS_TC_EBPFCODEGEN_H_
 #define BACKENDS_TC_EBPFCODEGEN_H_
 
+// FIXME: these include each other and present file
 #include "backend.h"
+#include "tcExterns.h"
 
 namespace TC {
 
+using namespace P4::literals;
+
 class ConvertToBackendIR;
 class EBPFPnaParser;
+class EBPFRegisterPNA;
 
 //  Similar to class PSAEbpfGenerator in backends/ebpf/psa/ebpfPsaGen.h
 
@@ -139,15 +144,20 @@ class EBPFPnaParser : public EBPF::EBPFPsaParser {
 
 class EBPFTablePNA : public EBPF::EBPFTablePSA {
  protected:
-    EBPF::ActionTranslationVisitor *createActionTranslationVisitor(
-        cstring valueName, const EBPF::EBPFProgram *program) const override;
+    EBPF::ActionTranslationVisitor *createActionTranslationVisitor(cstring valueName,
+                                                                   const EBPF::EBPFProgram *program,
+                                                                   const IR::P4Action *action,
+                                                                   bool isDefaultAction) const;
     void validateKeys() const override;
+    void initDirectCounters();
     const ConvertToBackendIR *tcIR;
 
  public:
     EBPFTablePNA(const EBPF::EBPFProgram *program, const IR::TableBlock *table,
                  EBPF::CodeGenInspector *codeGen, const ConvertToBackendIR *tcIR)
-        : EBPF::EBPFTablePSA(program, table, codeGen), tcIR(tcIR) {}
+        : EBPF::EBPFTablePSA(program, table, codeGen), tcIR(tcIR) {
+        initDirectCounters();
+    }
     void emitInitializer(EBPF::CodeBuilder *builder) override;
     void emitDefaultActionStruct(EBPF::CodeBuilder *builder);
     void emitKeyType(EBPF::CodeBuilder *builder) override;
@@ -252,12 +262,38 @@ class ConvertToEBPFParserPNA : public Inspector {
     EBPF::EBPFParser *getEBPFParser() { return parser; }
 };
 
+class EBPFControlPNA : public EBPF::EBPFControlPSA {
+ public:
+    bool addExternDeclaration = false;
+    std::map<cstring, EBPFRegisterPNA *> pna_registers;
+
+    EBPFControlPNA(const EBPF::EBPFProgram *program, const IR::ControlBlock *control,
+                   const IR::Parameter *parserHeaders)
+        : EBPF::EBPFControlPSA(program, control, parserHeaders) {}
+
+    EBPFRegisterPNA *getRegister(cstring name) const {
+        auto result = ::get(pna_registers, name);
+        BUG_CHECK(result != nullptr, "No register named %1%", name);
+        return result;
+    }
+    void emitExternDefinition(EBPF::CodeBuilder *builder) {
+        if (addExternDeclaration) {
+            builder->emitIndent();
+            builder->appendLine("struct p4tc_ext_bpf_params ext_params = {};");
+            builder->emitIndent();
+            builder->appendLine("struct p4tc_ext_bpf_val ext_val = {};");
+            builder->emitIndent();
+            builder->appendLine("struct p4tc_ext_bpf_val *ext_val_ptr;");
+        }
+    }
+};
+
 // Similar to class ConvertToEBPFControlPSA in backends/ebpf/psa/ebpfPsaGen.h
 
 class ConvertToEBPFControlPNA : public Inspector {
     EBPF::EBPFProgram *program;
     EBPF::pipeline_type type;
-    EBPF::EBPFControlPSA *control;
+    EBPFControlPNA *control;
 
     const IR::Parameter *parserHeaders;
     P4::ReferenceMap *refmap;
@@ -282,7 +318,7 @@ class ConvertToEBPFControlPNA : public Inspector {
     bool preorder(const IR::IfStatement *a) override;
     bool preorder(const IR::ExternBlock *instance) override;
     bool checkPnaTimestampMem(const IR::Member *m);
-    EBPF::EBPFControlPSA *getEBPFControl() { return control; }
+    EBPFControlPNA *getEBPFControl() { return control; }
 };
 
 // Similar to class ConvertToEBPFDeparserPSA in backends/ebpf/psa/ebpfPsaGen.h
@@ -309,11 +345,10 @@ class ControlBodyTranslatorPNA : public EBPF::ControlBodyTranslator {
  public:
     const ConvertToBackendIR *tcIR;
     const EBPF::EBPFTablePSA *table;
-    explicit ControlBodyTranslatorPNA(const EBPF::EBPFControlPSA *control);
-    explicit ControlBodyTranslatorPNA(const EBPF::EBPFControlPSA *control,
+    explicit ControlBodyTranslatorPNA(const EBPFControlPNA *control);
+    explicit ControlBodyTranslatorPNA(const EBPFControlPNA *control,
                                       const ConvertToBackendIR *tcIR);
-    explicit ControlBodyTranslatorPNA(const EBPF::EBPFControlPSA *control,
-                                      const ConvertToBackendIR *tcIR,
+    explicit ControlBodyTranslatorPNA(const EBPFControlPNA *control, const ConvertToBackendIR *tcIR,
                                       const EBPF::EBPFTablePSA *table);
     void processFunction(const P4::ExternFunction *function) override;
     void processApply(const P4::ApplyMethod *method) override;
@@ -333,14 +368,16 @@ class ActionTranslationVisitorPNA : public EBPF::ActionTranslationVisitor,
                                     public ControlBodyTranslatorPNA {
  protected:
     const EBPF::EBPFTablePSA *table;
+    bool isDefaultAction;
 
  public:
     const ConvertToBackendIR *tcIR;
     ActionTranslationVisitorPNA(const EBPF::EBPFProgram *program, cstring valueName,
-                                const EBPF::EBPFTablePSA *table, const ConvertToBackendIR *tcIR);
-
+                                const EBPF::EBPFTablePSA *table, const ConvertToBackendIR *tcIR,
+                                const IR::P4Action *act, bool isDefaultAction);
     bool preorder(const IR::PathExpression *pe) override;
     bool isActionParameter(const IR::Expression *expression) const;
+    void processMethod(const P4::ExternMethod *method) override;
 
     cstring getParamInstanceName(const IR::Expression *expression) const override;
     cstring getParamName(const IR::PathExpression *) override;
@@ -372,12 +409,12 @@ class CRC16ChecksumAlgorithmPNA : public CRCChecksumAlgorithmPNA {
  public:
     CRC16ChecksumAlgorithmPNA(const EBPF::EBPFProgram *program, cstring name)
         : CRCChecksumAlgorithmPNA(program, name, 16) {
-        initialValue = "0";
+        initialValue = "0"_cs;
         // We use a 0x8005 polynomial.
         // 0xA001 comes from 0x8005 value bits reflection.
-        polynomial = "0xA001";
-        updateMethod = "crc16_update";
-        finalizeMethod = "crc16_finalize";
+        polynomial = "0xA001"_cs;
+        updateMethod = "crc16_update"_cs;
+        finalizeMethod = "crc16_finalize"_cs;
     }
 
     static void emitGlobals(EBPF::CodeBuilder *builder);
@@ -387,12 +424,12 @@ class CRC32ChecksumAlgorithmPNA : public CRCChecksumAlgorithmPNA {
  public:
     CRC32ChecksumAlgorithmPNA(const EBPF::EBPFProgram *program, cstring name)
         : CRCChecksumAlgorithmPNA(program, name, 32) {
-        initialValue = "0xffffffff";
+        initialValue = "0xffffffff"_cs;
         // We use a 0x04C11DB7 polynomial.
         // 0xEDB88320 comes from 0x04C11DB7 value bits reflection.
-        polynomial = "0xEDB88320";
-        updateMethod = "crc32_update";
-        finalizeMethod = "crc32_finalize";
+        polynomial = "0xEDB88320"_cs;
+        updateMethod = "crc32_update"_cs;
+        finalizeMethod = "crc32_finalize"_cs;
     }
 
     static void emitGlobals(EBPF::CodeBuilder *builder);

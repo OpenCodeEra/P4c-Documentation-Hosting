@@ -1,19 +1,17 @@
 #include "backends/p4tools/modules/testgen/targets/pna/dpdk/program_info.h"
 
-#include <list>
 #include <utility>
-#include <variant>
 #include <vector>
 
 #include "backends/p4tools/common/lib/arch_spec.h"
 #include "backends/p4tools/common/lib/util.h"
 #include "ir/id.h"
 #include "ir/ir.h"
+#include "ir/irutils.h"
 #include "lib/cstring.h"
 #include "lib/exceptions.h"
 
-#include "backends/p4tools/modules/testgen/core/compiler_target.h"
-#include "backends/p4tools/modules/testgen/core/target.h"
+#include "backends/p4tools/modules/testgen/core/compiler_result.h"
 #include "backends/p4tools/modules/testgen/lib/concolic.h"
 #include "backends/p4tools/modules/testgen/lib/continuation.h"
 #include "backends/p4tools/modules/testgen/lib/exceptions.h"
@@ -21,6 +19,8 @@
 #include "backends/p4tools/modules/testgen/targets/pna/constants.h"
 
 namespace P4Tools::P4Testgen::Pna {
+
+using namespace P4::literals;
 
 PnaDpdkProgramInfo::PnaDpdkProgramInfo(
     const TestgenCompilerResult &compilerResult,
@@ -69,7 +69,7 @@ std::vector<Continuation::Command> PnaDpdkProgramInfo::processDeclaration(
     std::vector<Continuation::Command> cmds;
     // Copy-in.
     const auto *copyInCall = new IR::MethodCallStatement(Utils::generateInternalMethodCall(
-        "copy_in", {new IR::StringLiteral(typeDecl->name)}, IR::Type_Void::get(),
+        "copy_in", {IR::StringLiteral::get(typeDecl->name)}, IR::Type_Void::get(),
         new IR::ParameterList(
             {new IR::Parameter("blockRef", IR::Direction::In, IR::Type_Unknown::get())})));
     cmds.emplace_back(copyInCall);
@@ -77,7 +77,7 @@ std::vector<Continuation::Command> PnaDpdkProgramInfo::processDeclaration(
     cmds.emplace_back(typeDecl);
     // Copy-out.
     const auto *copyOutCall = new IR::MethodCallStatement(Utils::generateInternalMethodCall(
-        "copy_out", {new IR::StringLiteral(typeDecl->name)}, IR::Type_Void::get(),
+        "copy_out", {IR::StringLiteral::get(typeDecl->name)}, IR::Type_Void::get(),
         new IR::ParameterList(
             {new IR::Parameter("blockRef", IR::Direction::In, IR::Type_Unknown::get())})));
     cmds.emplace_back(copyOutCall);
@@ -113,33 +113,34 @@ std::vector<Continuation::Command> PnaDpdkProgramInfo::processDeclaration(
 }
 
 const ArchSpec PnaDpdkProgramInfo::ARCH_SPEC = ArchSpec(
-    "PNA_NIC", {
-                   // parser MainParserT<MH, MM>(
-                   //     packet_in pkt,
-                   //     //in    PM pre_user_meta,
-                   //     out   MH main_hdr,
-                   //     inout MM main_user_meta,
-                   //     in    pna_main_parser_input_metadata_t istd);
-                   {"MainParserT", {nullptr, "*main_hdr", "*main_user_meta", "*parser_istd"}},
-                   // control PreControlT<PH, PM>(
-                   //     in    PH pre_hdr,
-                   //     inout PM pre_user_meta,
-                   //     in    pna_pre_input_metadata_t  istd,
-                   //     inout pna_pre_output_metadata_t ostd);
-                   {"PreControlT", {"*main_hdr", "*main_user_meta", "*pre_istd", "*pre_ostd"}},
-                   // control MainControlT<MH, MM>(
-                   //     //in    PM pre_user_meta,
-                   //     inout MH main_hdr,
-                   //     inout MM main_user_meta,
-                   //     in    pna_main_input_metadata_t  istd,
-                   //     inout pna_main_output_metadata_t ostd);
-                   {"MainControlT", {"*main_hdr", "*main_user_meta", "*main_istd", "*ostd"}},
-                   // control MainDeparserT<MH, MM>(
-                   //     packet_out pkt,
-                   //     in    MH main_hdr,
-                   //     in    MM main_user_meta,
-                   //     in    pna_main_output_metadata_t ostd);
-                   {"MainDeparserT", {nullptr, "*main_hdr", "*main_user_meta", "*ostd"}},
-               });
+    "PNA_NIC"_cs,
+    {
+        // parser MainParserT<MH, MM>(
+        //     packet_in pkt,
+        //     //in    PM pre_user_meta,
+        //     out   MH main_hdr,
+        //     inout MM main_user_meta,
+        //     in    pna_main_parser_input_metadata_t istd);
+        {"MainParserT"_cs, {nullptr, "*main_hdr"_cs, "*main_user_meta"_cs, "*parser_istd"_cs}},
+        // control PreControlT<PH, PM>(
+        //     in    PH pre_hdr,
+        //     inout PM pre_user_meta,
+        //     in    pna_pre_input_metadata_t  istd,
+        //     inout pna_pre_output_metadata_t ostd);
+        {"PreControlT"_cs, {"*main_hdr"_cs, "*main_user_meta"_cs, "*pre_istd"_cs, "*pre_ostd"_cs}},
+        // control MainControlT<MH, MM>(
+        //     //in    PM pre_user_meta,
+        //     inout MH main_hdr,
+        //     inout MM main_user_meta,
+        //     in    pna_main_input_metadata_t  istd,
+        //     inout pna_main_output_metadata_t ostd);
+        {"MainControlT"_cs, {"*main_hdr"_cs, "*main_user_meta"_cs, "*main_istd"_cs, "*ostd"_cs}},
+        // control MainDeparserT<MH, MM>(
+        //     packet_out pkt,
+        //     in    MH main_hdr,
+        //     in    MM main_user_meta,
+        //     in    pna_main_output_metadata_t ostd);
+        {"MainDeparserT"_cs, {nullptr, "*main_hdr"_cs, "*main_user_meta"_cs, "*ostd"_cs}},
+    });
 
 }  // namespace P4Tools::P4Testgen::Pna

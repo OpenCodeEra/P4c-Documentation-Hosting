@@ -1,7 +1,7 @@
 frontends/p4/p4-lex.c
 frontends/p4/p4-parse.cpp
 py-compile
-_deps/
+
 # vi/emacs tags files
 
 TAGS
@@ -45,15 +45,7 @@ bazel-*
 
 # JetBrains
 .idea/
-
-# related to spinex
-build
-node_modules
-venv
-.venv
-doxygen-out
-
 docs/doxygen/p4c-doxygen-warn.log
-CMakeCache.txt
-CMakeFiles/
-docs/doxygen/doxygen-awesome-css/
+
+# Local Documentation build theme files
+docs/doxygen/awesome_css/

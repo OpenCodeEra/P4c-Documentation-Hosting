@@ -1,6 +1,6 @@
-[![Status](https://github.com/p4lang/p4c/actions/workflows/ci-p4tools.yml/badge.svg)](https://github.com/p4lang/p4c/actions/workflows/ci-p4tools.yml)
+# P4Testgen
 
-# <img src="https://p4.org/wp-content/uploads/2021/05/Group-81.png" width="40">Testgen
+[![Status](https://github.com/p4lang/p4c/actions/workflows/ci-p4tools.yml/badge.svg)](https://github.com/p4lang/p4c/actions/workflows/ci-p4tools.yml)
 
 ## Table of Contents
 
@@ -33,6 +33,12 @@ P4Testgen is an extensible [test oracle](https://en.wikipedia.org/wiki/Test_orac
 P4Testgen depends on the P4Tools framework and is automatically installed with P4Tools. Please follow the instructions listed [here](https://github.com/p4lang/p4c/tree/main/backends/p4tools#building) to install P4Testgen. The main binary `p4testgen` can be found in the `build` folder after a successful installation.
 
 P4Testgen is available as part of the [official P4C docker image](https://hub.docker.com/r/p4lang/p4c/). On Debian-based systems, it is also possible to install a P4Testgen binary by following [these](https://github.com/p4lang/p4c#installing-packaged-versions-of-p4c) instructions.
+
+### Dependencies
+In addition to [P4Tools'](../README.md#dependencies) own dependencies P4Testgen depends on the following external software:
+  * [inja](https://github.com/pantor/inja) template engine for testcase generation.
+
+These dependencies are automatically installed via CMakelist's [FetchContent](https://cmake.org/cmake/help/latest/module/FetchContent.html) module.
 
 ## Extensions
 P4Testgen extensions are instantiations of a particular combination of P4 architecture and the target that executes the P4 code. For example, the `v1model.p4` architecture can be executed on the behavioral model. P4Testgen extension make use of the core P4Testgen framework to generate tests. Several open-source extensions are available.
@@ -152,7 +158,7 @@ If you would like to cite this work please use this citation format:
 
 ## Contributing
 
-Contributions to P4Testgen in any form are welcome! Please follow the guidelines listed [here](https://github.com/p4lang/p4c/tree/main/docs) to contribute.
+Contributions to P4Testgen in any form are welcome! Please follow the guidelines listed [here](https://github.com/p4lang/p4c/blob/main/CONTRIBUTING.md) to contribute.
 
 ## License
 

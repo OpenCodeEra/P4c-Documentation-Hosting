@@ -83,7 +83,7 @@ if (/* hdr->p4calc.isValid() */
                     /* value */
                     struct MainControlImpl_calculate_value *value = NULL;
                     /* perform lookup */
-                    act_bpf = bpf_p4tc_tbl_read(skb, &params, &key, sizeof(key));
+                    act_bpf = bpf_p4tc_tbl_read(skb, &params, sizeof(params), &key, sizeof(key));
                     value = (struct MainControlImpl_calculate_value *)act_bpf;
                     if (value == NULL) {
                         /* miss; find default action */
@@ -308,6 +308,7 @@ SEC("p4tc/main")
 int tc_ingress_func(struct __sk_buff *skb) {
     struct pna_global_metadata *compiler_meta__ = (struct pna_global_metadata *) skb->cb;
     if (compiler_meta__->pass_to_kernel == true) return TC_ACT_OK;
+    compiler_meta__->drop = false;
     if (!compiler_meta__->recirculated) {
         compiler_meta__->mark = 153;
         struct internal_metadata *md = (struct internal_metadata *)(unsigned long)skb->data_meta;

@@ -40,7 +40,7 @@ inja::json STF::getControlPlane(const TestSpec *testSpec) {
     // Map of actionProfiles and actionSelectors for easy reference.
     std::map<cstring, cstring> apAsMap;
 
-    auto tables = testSpec->getTestObjectCategory("tables");
+    auto tables = testSpec->getTestObjectCategory("tables"_cs);
     if (!tables.empty()) {
         controlPlaneJson["tables"] = inja::json::array();
     }
@@ -117,7 +117,7 @@ inja::json STF::getControlPlaneForTable(const TableMatchMap &matches,
             auto fieldWidth = dataValue->type->width_bits();
             auto maxVal = IR::getMaxBvVal(prefixLen);
             const auto *maskField =
-                IR::getConstant(dataValue->type, maxVal << (fieldWidth - prefixLen));
+                IR::Constant::get(dataValue->type, maxVal << (fieldWidth - prefixLen));
             BUG_CHECK(dataValue->type->width_bits() == maskField->type->width_bits(),
                       "Data value and its mask should have the same bit width.");
             // Using the width from mask - should be same as data

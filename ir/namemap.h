@@ -46,7 +46,7 @@ class NameMap : public Node {
     auto obj_name(const U *obj) -> decltype(obj->name) {
         return obj->name;
     }
-    cstring obj_name(const void *) { return cstring(0); }
+    cstring obj_name(const void *) { return nullptr; }
 
  public:
     NameMap() = default;
@@ -130,7 +130,7 @@ class NameMap : public Node {
     }
 
     IRNODE_SUBCLASS(NameMap)
-    bool operator==(const Node &a) const override { return a == *this; }
+    bool operator==(const Node &a) const override { return a.operator==(*this); }
     bool operator==(const NameMap &a) const { return symbols == a.symbols; }
     bool equiv(const Node &a_) const override {
         if (static_cast<const Node *>(this) == &a_) return true;

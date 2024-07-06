@@ -29,9 +29,9 @@ filegroup(
         git_repository(
             name = "com_github_nelhage_rules_boost",
             # Newest commit on main branch as of April 11, 2023.
-            commit = "ded8ba4bcdadb50a2fb2f363b1501eb775d13aac",
+            commit = "e1854fb177ae91dc82ce9534737f5238d2cee9d0",
             remote = "https://github.com/nelhage/rules_boost",
-            shallow_since = "1680804650 -0700",
+            shallow_since = "1711834277 -0700",
         )
     if not native.existing_rule("com_github_p4lang_p4runtime"):
         # Cannot currently use local_repository due to Bazel limitation,
@@ -47,13 +47,10 @@ filegroup(
         git_repository(
             name = "com_github_p4lang_p4runtime",
             remote = "https://github.com/p4lang/p4runtime",
-            # Newest commit on main branch as of August 11, 2023.
-            commit = "1e771c4e05c4e7e250df00212b3ca02ee3202d71",
+            # Newest commit on main branch as of May 30, 2024.
+            commit = "62a9bd60599b87497a15feb6c7893b7ec8ba461f",
             shallow_since = "1680213111 -0700",
-            # strip_prefix is broken; we use patch_cmds as a workaround,
-            # see https://github.com/bazelbuild/bazel/issues/10062.
-            # strip_prefix = "proto",
-            patch_cmds = ["mv proto/* ."],
+            strip_prefix = "proto",
         )
     if not native.existing_rule("com_google_googletest"):
         # Cannot currently use local_repository due to Bazel limitation,
@@ -77,12 +74,6 @@ filegroup(
             name = "com_google_absl",
             url = "https://github.com/abseil/abseil-cpp/releases/download/20240116.1/abseil-cpp-20240116.1.tar.gz",
             strip_prefix = "abseil-cpp-20240116.1",
-            # We patch Abseil to support bracketed system includes.
-            # Patch is sourced from https://github.com/abseil/abseil-cpp/pull/1637.
-            # Discussion around Abseil's lack of support for bracketed system includes:
-            # https://github.com/abseil/abseil-cpp/issues/740
-            patches = ["@com_github_p4lang_p4c//:bazel/abseil.patch"],
-            patch_args = ["-p1"],
             sha256 = "3c743204df78366ad2eaf236d6631d83f6bc928d1705dd0000b872e53b73dc6a",
         )
     if not native.existing_rule("com_google_protobuf"):

@@ -112,144 +112,150 @@ struct __attribute__((__packed__)) p4tc_table_entry_act_bpf {
 };
 
 struct p4tc_table_entry_create_bpf_params__local {
+        struct p4tc_table_entry_act_bpf act_bpf;
         u32 pipeid;
         u32 tblid;
         u32 profile_id;
+        u32 handle;                                                                     
+        u32 classid;                                                                               
+        u32 chain;                     
+        u16 proto;
+        u16 prio;
 };
-extern struct p4tc_table_entry_act_bpf *bpf_p4tc_tbl_read(
-    struct __sk_buff *skb, struct p4tc_table_entry_act_bpf_params__local *params, void *key,
-    const u32 key__sz) __ksym;
-extern struct p4tc_table_entry_act_bpf *bpf_xdp_p4tc_tbl_lookup(
-    struct xdp_md *skb, struct p4tc_table_entry_act_bpf_params__local *params, void *key,
-    const u32 key__sz) __ksym;
+extern struct p4tc_table_entry_act_bpf * 
+bpf_p4tc_tbl_read(struct __sk_buff *skb_ctx,
+                  struct p4tc_table_entry_act_bpf_params__local *params,
+                  const u32 params__sz,
+                  void *key, const __u32 key__sz) __ksym;
+
+extern struct p4tc_table_entry_act_bpf * 
+xdp_p4tc_tbl_read(struct xdp_md *skb_ctx,
+                  struct p4tc_table_entry_act_bpf_params__local *params,
+                  const u32 params__sz,
+                  void *key, const __u32 key__sz) __ksym;
 
 /* No mapping to PNA, but are useful utilities */
 extern int
 bpf_p4tc_entry_create(struct __sk_buff *skb_ctx,
                       struct p4tc_table_entry_create_bpf_params__local *params,
-                      void *key, const u32 key__sz,
-                      struct p4tc_table_entry_act_bpf *act_bpf) __ksym;
+                      const u32 params__sz,
+                      void *key, const u32 key__sz) __ksym;
 
 extern int
 xdp_p4tc_entry_create(struct xdp_md *xdp_ctx,
                       struct p4tc_table_entry_create_bpf_params__local *params,
-                      void *bpf_key_mask, u32 bpf_key_mask__sz,
-                      struct p4tc_table_entry_act_bpf *act_bpf) __ksym;
+                      const u32 params__sz,
+                      void *bpf_key_mask, u32 bpf_key_mask__sz) __ksym;
 
 /* Equivalent to PNA add-on-miss */
 extern int
 bpf_p4tc_entry_create_on_miss(struct __sk_buff *skb_ctx,
-			      struct p4tc_table_entry_create_bpf_params__local *params,
-			      void *key, const u32 key__sz,
-			      struct p4tc_table_entry_act_bpf *act_bpf) __ksym;
+                              struct p4tc_table_entry_create_bpf_params__local *params,
+                              const u32 params__sz,
+                              void *key, const u32 key__sz) __ksym;
 
 extern int
 xdp_p4tc_entry_create_on_miss(struct xdp_md *xdp_ctx,
-			      struct p4tc_table_entry_create_bpf_params__local *params,
-			      void *key, const u32 key__sz,
-			      struct p4tc_table_entry_act_bpf *act_bpf) __ksym;
-
-/* No mapping to PNA, but are useful utilities */
-extern int
-bpf_p4tc_entry_update(struct __sk_buff *skb_ctx,
-		      struct p4tc_table_entry_create_bpf_params__local *params,
-		      void *key, const u32 key__sz,
-		      struct p4tc_table_entry_act_bpf *act_bpf) __ksym;
-
-extern int
-xdp_p4tc_entry_update(struct xdp_md *xdp_ctx,
-		      struct p4tc_table_entry_create_bpf_params__local *params,
-		      void *key, const u32 key__sz,
-		      struct p4tc_table_entry_act_bpf *act_bpf) __ksym;
+                              struct p4tc_table_entry_create_bpf_params__local *params,
+                              const u32 params__sz,
+                              void *key, const u32 key__sz) __ksym;
 
 /* No mapping to PNA, but are useful utilities */
 extern int
 bpf_p4tc_entry_delete(struct __sk_buff *skb_ctx,
-		      struct p4tc_table_entry_create_bpf_params__local *params,
-		      void *key, const u32 key__sz) __ksym;
+                      struct p4tc_table_entry_create_bpf_params__local *params,
+                      const u32 params__sz,
+                      void *key, const u32 key__sz) __ksym;
 
 extern int
 xdp_p4tc_entry_delete(struct xdp_md *xdp_ctx,
-		      struct p4tc_table_entry_create_bpf_params__local *params,
-		      void *key, const u32 key__sz) __ksym;
+                      struct p4tc_table_entry_create_bpf_params__local *params,
+                      const u32 params__sz,
+                      void *key, const u32 key__sz) __ksym;
 
 /* Start generic kfunc interface to any extern */
+
+#define P4TC_EXT_CNT_DIRECT 0x1
+#define P4TC_EXT_CNT_INDIRECT 0x2
+
 struct p4tc_ext_bpf_params {
+    u32 pipe_id;
     u32 ext_id;
-    u8 params[124]; // extern specific params if any
+    u32 inst_id;
+    u32 tbl_id;
+    u32 index;
+    u32 flags;
+    u8  in_params[128]; /* extern specific params if any */
 };
 
-struct __attribute__((__packed__)) p4tc_ext_bpf_res {
+struct p4tc_ext_bpf_val {
     u32 ext_id;
-    u8 params[124]; // extern specific values if any
+    u32 index_id;
+    u32 verdict;
+    u8 out_params[128]; /* specific values if any */
 };
 
 /* Equivalent to PNA indirect counters */
 extern int
-bpf_p4tc_extern_indirect_count_pktsnbytes(struct __sk_buff *skb_ctx,
+bpf_p4tc_extern_count_pktsnbytes(struct __sk_buff *skb_ctx,
 					  struct p4tc_ext_bpf_params *params,
-					  struct p4tc_ext_bpf_res *res) __ksym;
+					  const u32 params__sz, void *key, const u32 key__sz) __ksym;
 
 extern int
-bpf_p4tc_extern_indirect_count_pktsonly(struct __sk_buff *skb_ctx,
+bpf_p4tc_extern_count_pkts(struct __sk_buff *skb_ctx,
 					struct p4tc_ext_bpf_params *params,
-					struct p4tc_ext_bpf_res *res) __ksym;
+					const u32 params__sz, void *key, const u32 key__sz) __ksym;
 
 extern int
-bpf_p4tc_extern_indirect_count_bytesonly(struct __sk_buff *skb_ctx,
+bpf_p4tc_extern_count_bytes(struct __sk_buff *skb_ctx,
 					 struct p4tc_ext_bpf_params *params,
-					 struct p4tc_ext_bpf_res *res) __ksym;
+					 const u32 params__sz, void *key, const u32 key__sz) __ksym;
 
 extern int
 xdp_p4tc_extern_indirect_count_pktsnbytes(struct xdp_md *xdp_ctx,
 					  struct p4tc_ext_bpf_params *params,
-					  struct p4tc_ext_bpf_res *res) __ksym;
+					  const u32 params__sz) __ksym;
 
 extern int
 xdp_p4tc_extern_indirect_count_pktsonly(struct xdp_md *xdp_ctx,
 					struct p4tc_ext_bpf_params *params,
-					struct p4tc_ext_bpf_res *res) __ksym;
+					const u32 params__sz) __ksym;
 
 extern int
 xdp_p4tc_extern_indirect_count_bytesonly(struct xdp_md *xdp_ctx,
 					 struct p4tc_ext_bpf_params *params,
-					 struct p4tc_ext_bpf_res *res) __ksym;
+					 const u32 params__sz) __ksym;
 
 extern int bpf_p4tc_extern_meter_bytes_color(struct __sk_buff *skb_ctx,
                                              struct p4tc_ext_bpf_params *params,
-                                             struct p4tc_ext_bpf_res *res,
-                                             u8 color) __ksym;
+                                             const u32 params__sz) __ksym;
 
 extern int bpf_p4tc_extern_meter_bytes(struct __sk_buff *skb_ctx,
-				       struct p4tc_ext_bpf_params *params,
-				       struct p4tc_ext_bpf_res *res) __ksym;
+                                       struct p4tc_ext_bpf_params *params,
+                                       const u32 params__sz) __ksym;
 
 extern int bpf_p4tc_extern_meter_pkts_color(struct __sk_buff *skb_ctx,
                                             struct p4tc_ext_bpf_params *params,
-                                            struct p4tc_ext_bpf_res *res,
-                                            u8 color) __ksym;
+                                            const u32 params__sz) __ksym;
 
 extern int xdp_p4tc_extern_meter_pkts(struct xdp_md *xdp_ctx,
-				      struct p4tc_ext_bpf_params *params,
-				      struct p4tc_ext_bpf_res *res) __ksym;
+                                      struct p4tc_ext_bpf_params *params,
+                                      const u32 params__sz) __ksym;
 
 extern int xdp_p4tc_extern_meter_bytes_color(struct xdp_md *xdp_ctx,
-                                             struct p4tc_ext_bpf_params *params,
-                                             struct p4tc_ext_bpf_res *res,
-                                             u8 color) __ksym;
+                                             const u32 params__sz) __ksym;
 
 extern int xdp_p4tc_extern_meter_bytes(struct xdp_md *xdp_ctx,
-				       struct p4tc_ext_bpf_params *params,
-				       struct p4tc_ext_bpf_res *res) __ksym;
+                                       struct p4tc_ext_bpf_params *params,
+                                       const u32 params__sz) __ksym;
 
 extern int xdp_p4tc_extern_meter_pkts_color(struct xdp_md *xdp_ctx,
                                             struct p4tc_ext_bpf_params *params,
-                                            struct p4tc_ext_bpf_res *res,
-                                            u8 color) __ksym;
+                                            const u32 params__sz) __ksym;
 
 extern int xdp_p4tc_extern_meter_pkts(struct xdp_md *xdp_ctx,
-				      struct p4tc_ext_bpf_params *params,
-				      struct p4tc_ext_bpf_res *res) __ksym;
+                                      struct p4tc_ext_bpf_params *params,
+                                      const u32 params__sz) __ksym;
 
 /* Start checksum related kfuncs */
 struct p4tc_ext_csum_params {
@@ -339,17 +345,6 @@ bpf_p4tc_ext_hash_base_16bit_complement(const void *data, const u32 data__sz,
 	return (base + (hash % max));
 }
 
-// Generic api indirection for all externs which would hook into p4tc core code
-// or directly into kernel modules that could be written in C/RUST by user
-extern struct p4tc_ext_bpf_res *
-bpf_skb_p4tc_run_extern(struct __sk_buff *skb,
-                        struct p4tc_ext_bpf_params *params) __ksym;
-extern struct p4tc_ext_bpf_res *
-bpf_xdp_p4tc_run_extern(struct xdp_md *skb,
-                        struct p4tc_ext_bpf_params *params) __ksym;
-
-/* end generic kfunc interface to any extern */
-
 /* per extern specifics start */
 
 /* in this case it is PNA so  we have these helpers like below
@@ -364,104 +359,31 @@ bpf_xdp_p4tc_run_extern(struct xdp_md *skb,
 #define EXTERN_IS_NET_PORT 1234
 #define EXTERN_IS_HOST_PORT 4567
 
-static bool is_net_port_skb(struct __sk_buff *skb, u32 ifindex)
-{
-    struct p4tc_ext_bpf_params param = {};
-    u32 *index = (u32 *)param.params;
-    struct p4tc_ext_bpf_res *res;
-    u32 *direction;
-
-    param.ext_id = EXTERN_IS_NET_PORT;
-    *index = ifindex;
-
-    res = bpf_skb_p4tc_run_extern(skb, &param);
-    /* NULL means if index wasn't found, and this will default to host */
-    if (!res)
-        return false;
-
-    direction = (u32 *)res->params;
-
-    return *direction == FROM_NET;
-}
-
-static bool is_host_port_skb(struct __sk_buff *skb, u32 ifindex)
-{
-    struct p4tc_ext_bpf_params param = {};
-    u32 *index = (u32 *)param.params;
-    struct p4tc_ext_bpf_res *res;
-    u32 *direction;
-
-    param.ext_id = EXTERN_IS_HOST_PORT;
-    *index = ifindex;
-
-    res = bpf_skb_p4tc_run_extern(skb, &param);
-    /* NULL means if index wasn't found, and this will default to host */
-    if (!res)
-        return true;
-
-    direction = (u32 *)res->params;
-
-    return *direction == FROM_HOST;
-}
-
-static bool is_net_port_xdp(struct xdp_md *skb, u32 ifindex)
-{
-    struct p4tc_ext_bpf_params param = {};
-    u32 *index = (u32 *)param.params;
-    struct p4tc_ext_bpf_res *res;
-    u32 *direction;
-
-    param.ext_id = EXTERN_IS_NET_PORT;
-    *index = ifindex;
-
-    res = bpf_xdp_p4tc_run_extern(skb, &param);
-    /* NULL means if index wasn't found, and this will default to host */
-    if (!res)
-        return false;
-
-    direction = (u32 *)res->params;
-
-    return *direction == FROM_NET;
-}
-
-static bool is_host_port_xdp(struct xdp_md *skb, u32 ifindex)
-{
-    struct p4tc_ext_bpf_params param = {};
-    u32 *index = (u32 *)param.params;
-    struct p4tc_ext_bpf_res *res;
-    u32 *direction;
-
-    param.ext_id = EXTERN_IS_HOST_PORT;
-    *index = ifindex;
-
-    res = bpf_xdp_p4tc_run_extern(skb, &param);
-    /* NULL means if index wasn't found, and this will default to host */
-    if (!res)
-        return true;
-
-    direction = (u32 *)res->params;
-
-    return *direction == FROM_HOST;
-}
 /* Extern control path read (for example, used for register read) */
-extern int bpf_p4tc_extern_md_read(struct __sk_buff *skb_ctx,
-				   struct p4tc_ext_bpf_params *params,
-				   struct p4tc_ext_bpf_res *res) __ksym;
+extern struct p4tc_ext_bpf_val *
+bpf_p4tc_extern_md_read(struct __sk_buff *skb_ctx,
+			struct p4tc_ext_bpf_params *params,
+			const u32 params__sz) __ksym;
 
 /* Extern control path write (for example, used for register write) */
 extern int bpf_p4tc_extern_md_write(struct __sk_buff *skb_ctx,
 				    struct p4tc_ext_bpf_params *params,
-				    struct p4tc_ext_bpf_res *res) __ksym;
+				    const u32 params__sz,
+				    struct p4tc_ext_bpf_val *val,
+				    const u32 val__sz) __ksym;
 
 /* Extern control path read (for example, used for register read) for XDP */
-extern int xdp_p4tc_extern_md_read(struct xdp_md *xdp_ctx,
-				   struct p4tc_ext_bpf_params *params,
-				   struct p4tc_ext_bpf_res *res) __ksym;
+extern struct p4tc_ext_bpf_val *
+xdp_p4tc_extern_md_read(struct xdp_md *xdp_ctx,
+			struct p4tc_ext_bpf_params *params,
+			const u32 params__sz) __ksym;
 
 /* Extern control path read (for example, used for register write for XDP */
 extern int xdp_p4tc_extern_md_write(struct xdp_md *xdp_ctx,
 				    struct p4tc_ext_bpf_params *params,
-				    struct p4tc_ext_bpf_res *res) __ksym;
+				    const u32 params__sz,
+				    struct p4tc_ext_bpf_val *val,
+				    const u32 val__sz) __ksym;
 
 /* Timestamp  PNA extern */
 static inline u64 bpf_p4tc_extern_timestamp() {

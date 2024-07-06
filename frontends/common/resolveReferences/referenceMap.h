@@ -17,9 +17,8 @@ limitations under the License.
 #ifndef COMMON_RESOLVEREFERENCES_REFERENCEMAP_H_
 #define COMMON_RESOLVEREFERENCES_REFERENCEMAP_H_
 
-#include <absl/container/flat_hash_map.h>
-#include <absl/container/flat_hash_set.h>
-
+#include "absl/container/flat_hash_map.h"
+#include "absl/container/flat_hash_set.h"
 #include "frontends/common/programMap.h"
 #include "ir/ir.h"
 #include "ir/visitor.h"
@@ -29,7 +28,8 @@ namespace P4 {
 
 class NameGenerator {
  public:
-    virtual cstring newName(cstring base) = 0;
+    virtual cstring newName(std::string_view base) = 0;
+    virtual ~NameGenerator() = default;
 };
 
 // replacement for ReferenceMap NameGenerator to make it easier to remove uses of refMap
@@ -43,13 +43,13 @@ class MinimalNameGenerator : public NameGenerator, public Inspector {
 
  public:
     MinimalNameGenerator();
-    void usedName(cstring name) { usedNames.insert({name, 0}); }
+    void usedName(cstring name) { usedNames.emplace(name, 0); }
     explicit MinimalNameGenerator(const IR::Node *root) : MinimalNameGenerator() {
         root->apply(*this);
     }
 
     /// Generate a name from @p base that does not appear in usedNames.
-    cstring newName(cstring base) override;
+    cstring newName(std::string_view base) override;
 };
 
 // FIXME -- temp common base class to allow use of ReferenceMap or ResolutionContext
@@ -106,7 +106,7 @@ class ReferenceMap final : public ProgramMap, public NameGenerator, public Decla
     void setAnyOrder(bool anyOrder) { this->isv1 = anyOrder; }
 
     /// Generate a name from @p base that fresh for the program.
-    cstring newName(cstring base) override;
+    cstring newName(std::string_view base) override;
 
     /// Clear the reference map
     void clear();

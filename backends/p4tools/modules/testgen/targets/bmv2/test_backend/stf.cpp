@@ -111,7 +111,7 @@ inja::json STF::getControlPlaneForTable(const TableMatchMap &matches,
             auto fieldWidth = dataValue->type->width_bits();
             auto maxVal = IR::getMaxBvVal(prefixLen);
             const auto *maskField =
-                IR::getConstant(dataValue->type, maxVal << (fieldWidth - prefixLen));
+                IR::Constant::get(dataValue->type, maxVal << (fieldWidth - prefixLen));
             BUG_CHECK(dataValue->type->width_bits() == maskField->type->width_bits(),
                       "Data value and its mask should have the same bit width.");
             // Using the width from mask - should be same as data
@@ -226,7 +226,7 @@ void STF::emitTestcase(const TestSpec *testSpec, cstring selectedBranches, size_
     // Check whether this test has a clone configuration.
     // These are special because they require additional instrumentation and produce two output
     // packets.
-    auto cloneSpecs = testSpec->getTestObjectCategory("clone_specs");
+    auto cloneSpecs = testSpec->getTestObjectCategory("clone_specs"_cs);
     if (!cloneSpecs.empty()) {
         dataJson["clone_specs"] = getClone(cloneSpecs);
     }

@@ -1,11 +1,13 @@
 {
   "schema_version" : "1.0.0",
   "pipeline_name" : "add_entry_1_example",
+  "externs" : [],
   "tables" : [
     {
       "name" : "MainControlImpl/ipv4_tbl_1",
       "id" : 1,
-      "tentries" : 2048,
+      "tentries" : 1024,
+      "permissions" : "0x38e6",
       "nummask" : 8,
       "keysize" : 64,
       "keyfields" : [
@@ -43,7 +45,7 @@
             {
               "id" : 1,
               "name" : "dmac",
-              "type" : "bit48",
+              "type" : "macaddr",
               "bitwidth" : 48
             },
             {

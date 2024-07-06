@@ -20,6 +20,7 @@ and limitations under the License.
 #include <deque>
 
 #include "backends/ebpf/psa/ebpfPsaGen.h"
+#include "control-plane/p4RuntimeArchHandler.h"
 #include "ebpfCodeGen.h"
 #include "frontends/p4/evaluator/evaluator.h"
 #include "frontends/p4/parseAnnotations.h"
@@ -47,6 +48,20 @@ class PNAEbpfGenerator;
  */
 class ConvertToBackendIR : public Inspector {
  public:
+    struct ExternInstance {
+        cstring instance_name;
+        unsigned instance_id;
+        bool is_num_elements;
+        int num_elements;
+    };
+    struct ExternBlock {
+        cstring externId;
+        cstring control_name;
+        unsigned no_of_instances;
+        cstring permissions;
+        safe_vector<struct ExternInstance *> eInstance;
+    };
+    enum CounterType { PACKETS, BYTES, PACKETS_AND_BYTES };
     const IR::ToplevelBlock *tlb;
     IR::TCPipeline *tcPipeline;
     P4::ReferenceMap *refMap;
@@ -56,12 +71,17 @@ class ConvertToBackendIR : public Inspector {
     unsigned int actionCount = 0;
     unsigned int metadataCount = 0;
     unsigned int labelCount = 0;
+    unsigned int externCount = 0;
     cstring pipelineName = nullptr;
     cstring mainParserName = nullptr;
     ordered_map<cstring, const IR::P4Action *> actions;
     ordered_map<unsigned, cstring> tableIDList;
     ordered_map<unsigned, cstring> actionIDList;
     ordered_map<unsigned, unsigned> tableKeysizeList;
+    safe_vector<const IR::P4Table *> add_on_miss_tables;
+    ordered_map<cstring, std::pair<cstring, cstring> *> tablePermissions;
+    ordered_map<cstring, const IR::Type_Struct *> ControlStructPerExtern;
+    ordered_map<cstring, struct ExternBlock *> externsInfo;
 
  public:
     ConvertToBackendIR(const IR::ToplevelBlock *tlb, IR::TCPipeline *pipe, P4::ReferenceMap *refMap,
@@ -73,12 +93,24 @@ class ConvertToBackendIR : public Inspector {
     void postorder(const IR::P4Action *a) override;
     void postorder(const IR::P4Table *t) override;
     void postorder(const IR::P4Program *p) override;
+    void postorder(const IR::Declaration_Instance *d) override;
+    void postorder(const IR::Type_Struct *ts) override;
+    safe_vector<const IR::TCKey *> processExternConstructor(const IR::Type_Extern *extn,
+                                                            const IR::Declaration_Instance *decl,
+                                                            struct ExternInstance *instance);
+    safe_vector<const IR::TCKey *> processExternControlPath(const IR::Type_Extern *extn,
+                                                            const IR::Declaration_Instance *decl,
+                                                            cstring eName);
+    cstring getControlPathKeyAnnotation(const IR::StructField *field);
+    unsigned GetAccessNumericValue(std::string_view access);
+    bool isDuplicateAction(const IR::P4Action *action);
     bool isDuplicateOrNoAction(const IR::P4Action *action);
     void updateDefaultHitAction(const IR::P4Table *t, IR::TCTable *tdef);
     void updateDefaultMissAction(const IR::P4Table *t, IR::TCTable *tdef);
     void updateConstEntries(const IR::P4Table *t, IR::TCTable *tdef);
     void updateMatchType(const IR::P4Table *t, IR::TCTable *tabledef);
     void updateTimerProfiles(IR::TCTable *tabledef);
+    void updatePnaDirectCounter(const IR::P4Table *t, IR::TCTable *tabledef, unsigned tentries);
     bool isPnaParserMeta(const IR::Member *mem);
     bool isPnaMainInputMeta(const IR::Member *mem);
     bool isPnaMainOutputMeta(const IR::Member *mem);
@@ -87,15 +119,24 @@ class ConvertToBackendIR : public Inspector {
     unsigned getTcType(const IR::StringLiteral *sl);
     unsigned getTableId(cstring tableName) const;
     unsigned getActionId(cstring actionName) const;
+    cstring getExternId(cstring externName) const;
+    unsigned getExternInstanceId(cstring externName, cstring instanceName) const;
+    cstring processExternPermission(const IR::Type_Extern *ext);
     unsigned getTableKeysize(unsigned tableId) const;
     cstring externalName(const IR::IDeclaration *declaration) const;
-    void updateAddOnMissTable(cstring tblname) const {
-        for (auto table : tcPipeline->tableDefs) {
-            if (table->tableName == tblname) {
-                ((IR::TCTable *)table)->setTableAddOnMiss();
-            }
-        }
-    }
+    cstring HandleTableAccessPermission(const IR::P4Table *t);
+    std::pair<cstring, cstring> *GetAnnotatedAccessPath(const IR::Annotation *anno);
+    void updateAddOnMissTable(const IR::P4Table *t);
+    bool checkParameterDirection(const IR::TCAction *tcAction);
+    bool hasExecuteMethod(const IR::Type_Extern *extn);
+    safe_vector<const IR::TCKey *> HandleTypeNameStructField(const IR::StructField *field,
+                                                             const IR::Type_Extern *extn,
+                                                             const IR::Declaration_Instance *decl,
+                                                             int &kId, cstring annoName);
+    safe_vector<const IR::TCKey *> processCounterControlPathKeys(
+        const IR::Type_Struct *extern_control_path, const IR::Type_Extern *extn,
+        const IR::Declaration_Instance *decl);
+    CounterType toCounterType(const int type);
 };
 
 class Extern {

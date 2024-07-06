@@ -19,13 +19,12 @@
 
 #include "backends/p4tools/modules/testgen//lib/exceptions.h"
 #include "backends/p4tools/modules/testgen/core/program_info.h"
-#include "backends/p4tools/modules/testgen/core/target.h"
 #include "backends/p4tools/modules/testgen/lib/concolic.h"
 #include "backends/p4tools/modules/testgen/lib/continuation.h"
 #include "backends/p4tools/modules/testgen/lib/execution_state.h"
 #include "backends/p4tools/modules/testgen/lib/packet_vars.h"
 #include "backends/p4tools/modules/testgen/options.h"
-#include "backends/p4tools/modules/testgen/targets/bmv2/bmv2.h"
+#include "backends/p4tools/modules/testgen/targets/bmv2/compiler_result.h"
 #include "backends/p4tools/modules/testgen/targets/bmv2/concolic.h"
 #include "backends/p4tools/modules/testgen/targets/bmv2/constants.h"
 
@@ -73,7 +72,7 @@ Bmv2V1ModelProgramInfo::Bmv2V1ModelProgramInfo(
     }
     const IR::Expression *constraint =
         new IR::Grt(IR::Type::Boolean::get(), ExecutionState::getInputPacketSizeVar(),
-                    IR::getConstant(&PacketVars::PACKET_SIZE_VAR_TYPE, minPktSize));
+                    IR::Constant::get(&PacketVars::PACKET_SIZE_VAR_TYPE, minPktSize));
 
     for (const auto &restriction : compilerResult.getP4ConstraintsRestrictions()) {
         constraint = new IR::LAnd(constraint, restriction);
@@ -120,7 +119,7 @@ std::vector<Continuation::Command> Bmv2V1ModelProgramInfo::processDeclaration(
     std::vector<Continuation::Command> cmds;
     // Copy-in.
     const auto *copyInCall = new IR::MethodCallStatement(Utils::generateInternalMethodCall(
-        "copy_in", {new IR::StringLiteral(typeDecl->name)}, IR::Type_Void::get(),
+        "copy_in", {IR::StringLiteral::get(typeDecl->name)}, IR::Type_Void::get(),
         new IR::ParameterList(
             {new IR::Parameter("blockRef", IR::Direction::In, IR::Type_Unknown::get())})));
     cmds.emplace_back(copyInCall);
@@ -128,7 +127,7 @@ std::vector<Continuation::Command> Bmv2V1ModelProgramInfo::processDeclaration(
     cmds.emplace_back(typeDecl);
     // Copy-out.
     const auto *copyOutCall = new IR::MethodCallStatement(Utils::generateInternalMethodCall(
-        "copy_out", {new IR::StringLiteral(typeDecl->name)}, IR::Type_Void::get(),
+        "copy_out", {IR::StringLiteral::get(typeDecl->name)}, IR::Type_Void::get(),
         new IR::ParameterList(
             {new IR::Parameter("blockRef", IR::Direction::In, IR::Type_Unknown::get())})));
     cmds.emplace_back(copyOutCall);
@@ -139,7 +138,7 @@ std::vector<Continuation::Command> Bmv2V1ModelProgramInfo::processDeclaration(
     // processing. For example, the egress port.
     if ((archMember->blockName == "Ingress")) {
         auto *egressPortVar =
-            new IR::Member(IR::getBitType(BMv2Constants::PORT_BIT_WIDTH),
+            new IR::Member(IR::Type_Bits::get(BMv2Constants::PORT_BIT_WIDTH),
                            new IR::PathExpression("*standard_metadata"), "egress_port");
         auto *portStmt = new IR::AssignmentStatement(egressPortVar, getTargetOutputPortVar());
         cmds.emplace_back(portStmt);
@@ -152,8 +151,8 @@ std::vector<Continuation::Command> Bmv2V1ModelProgramInfo::processDeclaration(
             const IR::Expression *cond = new IR::Equ(
                 outPortVar, new IR::Constant(outPortVar->type, BMv2Constants::DROP_PORT));
             for (auto portRange : options.permittedPortRanges) {
-                const auto *loVarOut = IR::getConstant(outPortVar->type, portRange.first);
-                const auto *hiVarOut = IR::getConstant(outPortVar->type, portRange.second);
+                const auto *loVarOut = IR::Constant::get(outPortVar->type, portRange.first);
+                const auto *hiVarOut = IR::Constant::get(outPortVar->type, portRange.second);
                 cond = new IR::LOr(cond, new IR::LAnd(new IR::Leq(loVarOut, outPortVar),
                                                       new IR::Leq(outPortVar, hiVarOut)));
             }
@@ -162,8 +161,8 @@ std::vector<Continuation::Command> Bmv2V1ModelProgramInfo::processDeclaration(
         // TODO: We have not implemented multi cast yet.
         // Drop the packet if the multicast group is set.
         const IR::Expression *mcastGroupVar = new IR::Member(
-            IR::getBitType(16), new IR::PathExpression("*standard_metadata"), "mcast_grp");
-        mcastGroupVar = new IR::Neq(mcastGroupVar, IR::getConstant(IR::getBitType(16), 0));
+            IR::Type_Bits::get(16), new IR::PathExpression("*standard_metadata"), "mcast_grp");
+        mcastGroupVar = new IR::Neq(mcastGroupVar, IR::Constant::get(IR::Type_Bits::get(16), 0));
         auto *mcastStmt = new IR::IfStatement(mcastGroupVar, dropStmt, nullptr);
         cmds.emplace_back(mcastStmt);
     }
@@ -184,20 +183,20 @@ std::vector<Continuation::Command> Bmv2V1ModelProgramInfo::processDeclaration(
 }
 
 const IR::StateVariable &Bmv2V1ModelProgramInfo::getTargetInputPortVar() const {
-    return *new IR::StateVariable(new IR::Member(IR::getBitType(BMv2Constants::PORT_BIT_WIDTH),
+    return *new IR::StateVariable(new IR::Member(IR::Type_Bits::get(BMv2Constants::PORT_BIT_WIDTH),
                                                  new IR::PathExpression("*standard_metadata"),
                                                  "ingress_port"));
 }
 
 const IR::StateVariable &Bmv2V1ModelProgramInfo::getTargetOutputPortVar() const {
-    return *new IR::StateVariable(new IR::Member(IR::getBitType(BMv2Constants::PORT_BIT_WIDTH),
+    return *new IR::StateVariable(new IR::Member(IR::Type_Bits::get(BMv2Constants::PORT_BIT_WIDTH),
                                                  new IR::PathExpression("*standard_metadata"),
                                                  "egress_spec"));
 }
 
 const IR::Expression *Bmv2V1ModelProgramInfo::dropIsActive() const {
     const auto &egressPortVar = getTargetOutputPortVar();
-    return new IR::Equ(IR::getConstant(egressPortVar->type, BMv2Constants::DROP_PORT),
+    return new IR::Equ(IR::Constant::get(egressPortVar->type, BMv2Constants::DROP_PORT),
                        egressPortVar);
 }
 
@@ -245,32 +244,32 @@ const IR::Member *Bmv2V1ModelProgramInfo::getParserParamVar(const IR::P4Parser *
         const auto *paramString = parser->getApplyParameters()->parameters.at(paramIndex);
         structLabel = paramString->name;
     } else {
-        structLabel = ARCH_SPEC.getParamName("Parser", paramIndex);
+        structLabel = ARCH_SPEC.getParamName("Parser"_cs, paramIndex);
     }
     return new IR::Member(type, new IR::PathExpression(structLabel), paramLabel);
 }
 
-const ArchSpec Bmv2V1ModelProgramInfo::ARCH_SPEC =
-    ArchSpec("V1Switch", {// parser Parser<H, M>(packet_in b,
-                          //                     out H parsedHdr,
-                          //                     inout M meta,
-                          //                     inout standard_metadata_t standard_metadata);
-                          {"Parser", {nullptr, "*hdr", "*meta", "*standard_metadata"}},
-                          // control VerifyChecksum<H, M>(inout H hdr,
-                          //                              inout M meta);
-                          {"VerifyChecksum", {"*hdr", "*meta"}},
-                          // control Ingress<H, M>(inout H hdr,
-                          //                       inout M meta,
-                          //                       inout standard_metadata_t standard_metadata);
-                          {"Ingress", {"*hdr", "*meta", "*standard_metadata"}},
-                          // control Egress<H, M>(inout H hdr,
-                          //            inout M meta,
-                          //            inout standard_metadata_t standard_metadata);
-                          {"Egress", {"*hdr", "*meta", "*standard_metadata"}},
-                          // control ComputeChecksum<H, M>(inout H hdr,
-                          //                       inout M meta);
-                          {"ComputeChecksum", {"*hdr", "*meta"}},
-                          // control Deparser<H>(packet_out b, in H hdr);
-                          {"Deparser", {nullptr, "*hdr"}}});
+const ArchSpec Bmv2V1ModelProgramInfo::ARCH_SPEC = ArchSpec(
+    "V1Switch"_cs, {// parser Parser<H, M>(packet_in b,
+                    //                     out H parsedHdr,
+                    //                     inout M meta,
+                    //                     inout standard_metadata_t standard_metadata);
+                    {"Parser"_cs, {nullptr, "*hdr"_cs, "*meta"_cs, "*standard_metadata"_cs}},
+                    // control VerifyChecksum<H, M>(inout H hdr,
+                    //                              inout M meta);
+                    {"VerifyChecksum"_cs, {"*hdr"_cs, "*meta"_cs}},
+                    // control Ingress<H, M>(inout H hdr,
+                    //                       inout M meta,
+                    //                       inout standard_metadata_t standard_metadata);
+                    {"Ingress"_cs, {"*hdr"_cs, "*meta"_cs, "*standard_metadata"_cs}},
+                    // control Egress<H, M>(inout H hdr,
+                    //            inout M meta,
+                    //            inout standard_metadata_t standard_metadata);
+                    {"Egress"_cs, {"*hdr"_cs, "*meta"_cs, "*standard_metadata"_cs}},
+                    // control ComputeChecksum<H, M>(inout H hdr,
+                    //                       inout M meta);
+                    {"ComputeChecksum"_cs, {"*hdr"_cs, "*meta"_cs}},
+                    // control Deparser<H>(packet_out b, in H hdr);
+                    {"Deparser"_cs, {nullptr, "*hdr"_cs}}});
 
 }  // namespace P4Tools::P4Testgen::Bmv2

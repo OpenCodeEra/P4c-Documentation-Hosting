@@ -17,6 +17,7 @@ limitations under the License.
 #ifndef LIB_ERROR_REPORTER_H_
 #define LIB_ERROR_REPORTER_H_
 
+#include <iostream>
 #include <ostream>
 #include <set>
 #include <type_traits>
@@ -24,6 +25,8 @@ limitations under the License.
 
 #include <boost/format.hpp>
 
+#include "absl/strings/str_format.h"
+#include "bug_helper.h"
 #include "error_catalog.h"
 #include "error_helper.h"
 #include "exceptions.h"
@@ -75,9 +78,7 @@ class ErrorReporter {
     }
 
     /// retrieve the format from the error catalog
-    const char *get_error_name(int errorCode) {
-        return ErrorCatalog::getCatalog().getName(errorCode);
-    }
+    cstring get_error_name(int errorCode) { return ErrorCatalog::getCatalog().getName(errorCode); }
 
  public:
     ErrorReporter()
@@ -91,61 +92,55 @@ class ErrorReporter {
     }
 
     // error message for a bug
-    template <typename... T>
-    std::string bug_message(const char *format, T... args) {
+    template <typename... Args>
+    std::string bug_message(const char *format, Args &&...args) {
         boost::format fmt(format);
-        std::string message = ::bug_helper(fmt, "", "", "", args...);
-        return message;
+        // FIXME: This will implicitly take location of the first argument having
+        // SourceInfo. Not sure if this always desireable or not.
+        return ::bug_helper(fmt, "", "", std::forward<Args>(args)...);
     }
 
-    template <typename... T>
-    std::string format_message(const char *format, T... args) {
+    template <typename... Args>
+    std::string format_message(const char *format, Args &&...args) {
         boost::format fmt(format);
-        std::string message = ::error_helper(fmt, args...).toString();
-        return message;
+        return ::error_helper(fmt, std::forward<Args>(args)...).toString();
     }
 
-    template <
-        class T,
-        typename = typename std::enable_if<std::is_base_of<Util::IHasSourceInfo, T>::value>::type,
-        typename... Args>
+    template <class T, typename = std::enable_if_t<Util::has_SourceInfo_v<T>>, typename... Args>
     void diagnose(DiagnosticAction action, const int errorCode, const char *format,
-                  const char *suffix, const T *node, Args... args) {
+                  const char *suffix, const T *node, Args &&...args) {
         if (node && !error_reported(errorCode, node->getSourceInfo())) {
-            const char *name = get_error_name(errorCode);
+            cstring name = get_error_name(errorCode);
             auto da = getDiagnosticAction(name, action);
             if (name)
-                diagnose(da, name, format, suffix, node, args...);
+                diagnose(da, name, format, suffix, node, std::forward<Args>(args)...);
             else
                 diagnose(action, nullptr, format, suffix, node, std::forward<Args>(args)...);
         }
     }
 
-    template <
-        class T,
-        typename = typename std::enable_if<std::is_base_of<Util::IHasSourceInfo, T>::value>::type,
-        typename... Args>
+    template <class T, typename = std::enable_if_t<Util::has_SourceInfo_v<T>>, typename... Args>
     void diagnose(DiagnosticAction action, const int errorCode, const char *format,
-                  const char *suffix, const T &node, Args... args) {
+                  const char *suffix, const T &node, Args &&...args) {
         diagnose(action, errorCode, format, suffix, &node, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     void diagnose(DiagnosticAction action, const int errorCode, const char *format,
-                  const char *suffix, Args... args) {
-        const char *name = get_error_name(errorCode);
+                  const char *suffix, Args &&...args) {
+        cstring name = get_error_name(errorCode);
         auto da = getDiagnosticAction(name, action);
         if (name)
-            diagnose(da, name, format, suffix, args...);
+            diagnose(da, name, format, suffix, std::forward<Args>(args)...);
         else
             diagnose(action, nullptr, format, suffix, std::forward<Args>(args)...);
     }
 
     /// The sink of all the diagnostic functions. Here the error gets printed
     /// or an exception thrown if the error count exceeds maxErrorCount.
-    template <typename... T>
+    template <typename... Args>
     void diagnose(DiagnosticAction action, const char *diagnosticName, const char *format,
-                  const char *suffix, T... args) {
+                  const char *suffix, Args &&...args) {
         if (action == DiagnosticAction::Ignore) return;
 
         ErrorMessage::MessageType msgType = ErrorMessage::MessageType::None;
@@ -170,7 +165,7 @@ class ErrorReporter {
 
         boost::format fmt(format);
         ErrorMessage msg(msgType, diagnosticName ? diagnosticName : "", suffix);
-        msg = ::error_helper(fmt, msg, args...);
+        msg = ::error_helper(fmt, msg, std::forward<Args>(args)...);
         emit_message(msg);
 
         if (errorCount > maxErrorCount)
@@ -207,8 +202,7 @@ class ErrorReporter {
         std::stringstream ss;
         ss << message;
 
-        ParserErrorMessage msg(location, ss.str());
-        emit_message(msg);
+        emit_message(ParserErrorMessage(location, ss.str()));
     }
 
     /**
@@ -217,22 +211,22 @@ class ErrorReporter {
      * generator's C-based Bison parser, which doesn't have location information
      * available.
      */
-    void parser_error(const Util::InputSources *sources, const char *fmt, va_list args) {
+    template <typename... Args>
+    void parser_error(const Util::InputSources *sources, const char *fmt, Args &&...args) {
         errorCount++;
 
         Util::SourcePosition position = sources->getCurrentPosition();
         position--;
-        cstring message = Util::vprintf_format(fmt, args);
 
-        Util::SourceInfo info(sources, position);
-        ParserErrorMessage msg(info, message);
-        emit_message(msg);
-    }
-    void parser_error(const Util::InputSources *sources, const char *fmt, ...) {
-        va_list args;
-        va_start(args, fmt);
-        parser_error(sources, fmt, args);
-        va_end(args);
+        // Unfortunately, we cannot go with statically checked format string
+        // here as it would require some changes to yyerror
+        std::string message;
+        if (!absl::FormatUntyped(&message, absl::UntypedFormatSpec(fmt),
+                                 {absl::FormatArg(args)...})) {
+            BUG("Failed to format string");
+        }
+
+        emit_message(ParserErrorMessage(Util::SourceInfo(sources, position), std::move(message)));
     }
 
     /// @return the action to take for the given diagnostic, falling back to the
@@ -251,8 +245,8 @@ class ErrorReporter {
     }
 
     /// Set the action to take for the given diagnostic.
-    void setDiagnosticAction(cstring diagnostic, DiagnosticAction action) {
-        diagnosticActions[diagnostic] = action;
+    void setDiagnosticAction(std::string_view diagnostic, DiagnosticAction action) {
+        diagnosticActions[cstring(diagnostic)] = action;
     }
 
     /// @return the default diagnostic action for calls to `::warning()`.

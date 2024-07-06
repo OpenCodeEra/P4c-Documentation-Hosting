@@ -54,7 +54,11 @@ static __always_inline int process(struct __sk_buff *skb, struct headers_t *hdr,
     hdr = &(hdrMd->cpumap_hdr);
     user_meta = &(hdrMd->cpumap_usermeta);
 {
+        struct p4tc_ext_bpf_params ext_params = {};
+        struct p4tc_ext_bpf_val ext_val = {};
+        struct p4tc_ext_bpf_val *ext_val_ptr;
         u8 hit;
+        u32 val_0 = 0;
         {
 if (/* hdr->ipv4.isValid() */
             hdr->ipv4.ebpf_valid) {
@@ -75,7 +79,7 @@ if (/* hdr->ipv4.isValid() */
                     /* value */
                     struct MainControlImpl_ipv4_tbl_value *value = NULL;
                     /* perform lookup */
-                    act_bpf = bpf_p4tc_tbl_read(skb, &params, &key, sizeof(key));
+                    act_bpf = bpf_p4tc_tbl_read(skb, &params, sizeof(params), &key, sizeof(key));
                     value = (struct MainControlImpl_ipv4_tbl_value *)act_bpf;
                     if (value == NULL) {
                         /* miss; find default action */
@@ -88,7 +92,29 @@ if (/* hdr->ipv4.isValid() */
                         switch (value->action) {
                             case MAINCONTROLIMPL_IPV4_TBL_ACT_MAINCONTROLIMPL_NEXT_HOP: 
                                 {
-/* send_to_port(value->u.MainControlImpl_next_hop.vport) */
+                                    __builtin_memset(&ext_params, 0, sizeof(struct p4tc_ext_bpf_params));
+                                    ext_params.pipe_id = p4tc_filter_fields.pipeid;
+                                    ext_params.ext_id = 0x1;
+                                    ext_params.inst_id = 1;
+                                    ext_params.index = value->u.MainControlImpl_next_hop.vport;
+
+                                    ext_val_ptr = bpf_p4tc_extern_md_read(skb, &ext_params, sizeof(ext_params));
+                                    if (!ext_val_ptr) 
+                                         return TC_ACT_SHOT;
+ext_val = *ext_val_ptr;
+                                    __builtin_memcpy(&val_0, ext_val.out_params, sizeof(u32 ));
+                                                                        val_0 = (val_0 + 10);
+                                    /* reg1_0.write(value->u.MainControlImpl_next_hop.vport, val_0) */
+                                    __builtin_memset(&ext_params, 0, sizeof(struct p4tc_ext_bpf_params));
+                                    ext_params.pipe_id = p4tc_filter_fields.pipeid;
+                                    ext_params.ext_id = 0x1;
+                                    ext_params.inst_id = 1;
+                                    ext_params.index = value->u.MainControlImpl_next_hop.vport;
+
+                                    __builtin_memcpy(ext_val.out_params, &val_0, sizeof(u32 ));
+                                    bpf_p4tc_extern_md_write(skb, &ext_params, sizeof(ext_params), &ext_val, sizeof(ext_val));
+;
+                                    /* send_to_port(value->u.MainControlImpl_next_hop.vport) */
                                     compiler_meta__->drop = false;
                                     send_to_port(value->u.MainControlImpl_next_hop.vport);
                                 }
@@ -269,6 +295,7 @@ SEC("p4tc/main")
 int tc_ingress_func(struct __sk_buff *skb) {
     struct pna_global_metadata *compiler_meta__ = (struct pna_global_metadata *) skb->cb;
     if (compiler_meta__->pass_to_kernel == true) return TC_ACT_OK;
+    compiler_meta__->drop = false;
     if (!compiler_meta__->recirculated) {
         compiler_meta__->mark = 153;
         struct internal_metadata *md = (struct internal_metadata *)(unsigned long)skb->data_meta;

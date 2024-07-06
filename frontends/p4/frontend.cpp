@@ -26,7 +26,6 @@ limitations under the License.
 #include "frontends/p4/typeMap.h"
 #include "ir/ir.h"
 #include "lib/nullstream.h"
-#include "lib/path.h"
 // Passes
 #include "actionsInlining.h"
 #include "checkConstants.h"
@@ -92,9 +91,9 @@ This pass outputs the program as a P4 source file.
 */
 class PrettyPrint : public Inspector {
     /// output file
-    cstring ppfile;
+    std::filesystem::path ppfile;
     /// The file that is being compiled.
-    cstring inputfile;
+    std::filesystem::path inputfile;
 
  public:
     explicit PrettyPrint(const CompilerOptions &options) {
@@ -103,10 +102,10 @@ class PrettyPrint : public Inspector {
         inputfile = options.file;
     }
     bool preorder(const IR::P4Program *program) override {
-        if (!ppfile.isNullOrEmpty()) {
-            Util::PathName path(ppfile);
-            std::ostream *ppStream = openFile(path.toString(), true);
-            P4::ToP4 top4(ppStream, false, inputfile);
+        if (!ppfile.empty()) {
+            std::ostream *ppStream = openFile(ppfile, true);
+            // FIXME: ToP4 should accept PathName
+            P4::ToP4 top4(ppStream, false, cstring(inputfile));
             (void)program->apply(top4);
         }
         return false;  // prune
@@ -174,64 +173,62 @@ const IR::P4Program *FrontEnd::run(const CompilerOptions &options, const IR::P4P
         new ResolveReferences(&refMap, /* checkShadow */ true),
         // First pass of constant folding, before types are known --
         // may be needed to compute types.
-        new ConstantFolding(&refMap, nullptr, constantFoldingPolicy),
+        new ConstantFolding(constantFoldingPolicy),
         // Desugars direct parser and control applications
         // into instantiations followed by application
-        new InstantiateDirectCalls(&refMap),
-        new ResolveReferences(&refMap),
-        new Deprecated(&refMap),
+        new InstantiateDirectCalls(),
+        new Deprecated(),
         new CheckNamedArgs(),
         // Type checking and type inference.  Also inserts
         // explicit casts where implicit casts exist.
-        new SetStrictStruct(&typeMap, true),  // Next pass uses strict struct checking
-        new TypeInference(&refMap, &typeMap, false, false),  // insert casts, dont' check arrays
+        new SetStrictStruct(&typeMap, true),        // Next pass uses strict struct checking
+        new TypeInference(&typeMap, false, false),  // insert casts, don't check arrays
         new SetStrictStruct(&typeMap, false),
         new ValidateMatchAnnotations(&typeMap),
         new ValidateValueSets(),
-        new DefaultValues(&refMap, &typeMap),
-        new BindTypeVariables(&refMap, &typeMap),
-        new EntryPriorities(&refMap),
+        new DefaultValues(&typeMap),
+        new BindTypeVariables(&typeMap),
+        new EntryPriorities(),
         new PassRepeated({
-            new SpecializeGenericTypes(&refMap, &typeMap),
-            new DefaultArguments(&refMap, &typeMap),  // add default argument values to parameters
-            new ResolveReferences(&refMap),
-            new SetStrictStruct(&typeMap, true),          // Next pass uses strict struct checking
-            new TypeInference(&refMap, &typeMap, false),  // more casts may be needed
+            new SpecializeGenericTypes(&typeMap),
+            new DefaultArguments(&typeMap),       // add default argument values to parameters
+            new SetStrictStruct(&typeMap, true),  // Next pass uses strict struct checking
+            new TypeInference(&typeMap, false),   // more casts may be needed
             new SetStrictStruct(&typeMap, false),
-            new SpecializeGenericFunctions(&refMap, &typeMap),
+            new SpecializeGenericFunctions(&typeMap),
         }),
-        new CheckCoreMethods(&refMap, &typeMap),
-        new StaticAssert(&refMap, &typeMap),
-        new RemoveParserIfs(&refMap, &typeMap),
-        new StructInitializers(&refMap, &typeMap),
-        new TableKeyNames(&refMap, &typeMap),
+        new CheckCoreMethods(&typeMap),
+        new StaticAssert(&typeMap),
+        new RemoveParserIfs(&typeMap),
+        new StructInitializers(&typeMap),
+        new TableKeyNames(&typeMap),
         new PassRepeated({
-            new ConstantFolding(&refMap, &typeMap, constantFoldingPolicy),
-            new StrengthReduction(&refMap, &typeMap),
+            new ConstantFolding(&typeMap, constantFoldingPolicy),
+            new StrengthReduction(&typeMap, policy->enableSubConstToAddTransform()),
             new Reassociation(),
-            new UselessCasts(&refMap, &typeMap),
+            new UselessCasts(&typeMap),
         }),
-        new SimplifyControlFlow(&refMap, &typeMap),
+        new SimplifyControlFlow(&typeMap),
         new SwitchAddDefault,
         new FrontEndDump(),  // used for testing the program at this point
         new RemoveAllUnusedDeclarations(&refMap, *policy, true),
         new SimplifyParsers(&refMap),
-        new ResetHeaders(&refMap, &typeMap),
-        new UniqueNames(&refMap),  // Give each local declaration a unique internal name
-        new MoveDeclarations(),    // Move all local declarations to the beginning
-        new MoveInitializers(&refMap),
-        new SideEffectOrdering(&refMap, &typeMap, policy->skipSideEffectOrdering()),
-        new SimplifyControlFlow(&refMap, &typeMap),
-        new SimplifySwitch(&refMap, &typeMap),
+        new ResetHeaders(&typeMap),
+        new UniqueNames(),       // Give each local declaration a unique internal name
+        new MoveDeclarations(),  // Move all local declarations to the beginning
+        new MoveInitializers(),
+        new SideEffectOrdering(&typeMap, policy->skipSideEffectOrdering()),
+        new SimplifyControlFlow(&typeMap),
+        new SimplifySwitch(&typeMap),
         new MoveDeclarations(),  // Move all local declarations to the beginning
         new SimplifyDefUse(&refMap, &typeMap),
-        new UniqueParameters(&refMap, &typeMap),
-        new SimplifyControlFlow(&refMap, &typeMap),
+        new UniqueParameters(&typeMap),
+        new SimplifyControlFlow(&typeMap),
         new SpecializeAll(&refMap, &typeMap, policy),
-        new RemoveParserControlFlow(&refMap, &typeMap),
-        new RemoveReturns(&refMap),
-        new RemoveDontcareArgs(&refMap, &typeMap),
-        new MoveConstructors(&refMap),
+        new RemoveParserControlFlow(&typeMap),
+        new RemoveReturns(),
+        new RemoveDontcareArgs(&typeMap),
+        new MoveConstructors(),
         new RemoveAllUnusedDeclarations(&refMap, *policy),
         new RemoveRedundantParsers(&refMap, &typeMap, *policy),
         new ClearTypeMap(&typeMap),
@@ -242,24 +239,25 @@ const IR::P4Program *FrontEnd::run(const CompilerOptions &options, const IR::P4P
             new Inline(&refMap, &typeMap, evaluator, *policy, options.optimizeParserInlining),
             new InlineActions(&refMap, &typeMap, *policy),
             new LocalizeAllActions(&refMap, *policy),
-            new UniqueNames(&refMap),
-            new UniqueParameters(&refMap, &typeMap),
+            new UniqueNames(),
+            new UniqueParameters(&typeMap),
             // Must be done before inlining functions, to allow
             // function calls used as action arguments to be inlined
             // in the proper place.
-            new RemoveActionParameters(&refMap, &typeMap),
+            new RemoveActionParameters(&typeMap),
             new InlineFunctions(&refMap, &typeMap, *policy),
-            new SetHeaders(&refMap, &typeMap),
+            new SetHeaders(&typeMap),
             // Check for constants only after inlining
-            new CheckConstants(&refMap, &typeMap),
-            new SimplifyControlFlow(&refMap, &typeMap),
+            new CheckConstants(&typeMap),
+            new ConstantFolding(&typeMap, constantFoldingPolicy),
+            new SimplifyControlFlow(&typeMap),
             // more ifs may have been added to parsers
-            new RemoveParserControlFlow(&refMap, &typeMap),
-            new UniqueNames(&refMap),  // needed again after inlining
-            new MoveDeclarations(),    // needed again after inlining
+            new RemoveParserControlFlow(&typeMap),
+            new UniqueNames(),       // needed again after inlining
+            new MoveDeclarations(),  // needed again after inlining
             new SimplifyDefUse(&refMap, &typeMap),
             new RemoveAllUnusedDeclarations(&refMap, *policy),
-            new SimplifyControlFlow(&refMap, &typeMap),
+            new SimplifyControlFlow(&typeMap),
         });
     passes.addPasses({
         // Check for shadowing after all inlining passes. We disable this
@@ -269,7 +267,7 @@ const IR::P4Program *FrontEnd::run(const CompilerOptions &options, const IR::P4P
         new FrontEndLast(),
     });
     if (options.listFrontendPasses) {
-        passes.listPasses(*outStream, "\n");
+        passes.listPasses(*outStream, cstring::newline);
         *outStream << std::endl;
         return nullptr;
     }

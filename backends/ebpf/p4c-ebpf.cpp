@@ -81,7 +81,7 @@ void compile(EbpfOptions &options) {
     EBPF::MidEnd midend;
     midend.addDebugHook(hook);
     auto toplevel = midend.run(options, program);
-    if (options.dumpJsonFile)
+    if (!options.dumpJsonFile.empty())
         JSONGenerator(*openFile(options.dumpJsonFile, true)) << program << std::endl;
     if (::errorCount() > 0) return;
 
@@ -94,7 +94,7 @@ int main(int argc, char *const argv[]) {
 
     AutoCompileContext autoEbpfContext(new EbpfContext);
     auto &options = EbpfContext::get().options();
-    options.compilerVersion = P4C_EBPF_VERSION_STRING;
+    options.compilerVersion = cstring(P4C_EBPF_VERSION_STRING);
 
     if (options.process(argc, argv) != nullptr) {
         if (options.loadIRFromJson == false) options.setInputFile();

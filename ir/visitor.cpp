@@ -19,13 +19,14 @@ limitations under the License.
 #include <stdlib.h>
 #include <time.h>
 
-#include <absl/container/flat_hash_map.h>
-
+#include "absl/container/flat_hash_map.h"
+#include "absl/time/clock.h"
+#include "absl/time/time.h"
 #include "ir/ir-generated.h"
 #include "lib/hash.h"
 
 #if HAVE_LIBGC
-#include <gc/gc.h>
+#include <gc.h>
 #endif
 
 #include "dbprint.h"
@@ -57,11 +58,13 @@ class Visitor::ChangeTracker {
         const IR::Node *result;
     };
     using visited_t = absl::flat_hash_map<const IR::Node *, visit_info_t, Util::Hash>;
+    bool forceClone;
     visited_t visited;
 
  public:
-    ChangeTracker()
-        : visited(16) {}  // Pre-allocate 16 slots as usually these maps are small, but we do create
+    explicit ChangeTracker(bool forceClone)
+        : forceClone(forceClone),
+          visited(16) {}  // Pre-allocate 16 slots as usually these maps are small, but we do create
                           // lots of them. This saves quite some time for rehashes
 
     /** Begin tracking @n during a visiting pass.  Use `finish(@n)` to mark @n as
@@ -79,6 +82,7 @@ class Visitor::ChangeTracker {
         if (!inserted) {  // We already seen this node, determine its status
             if (it->second.visit_in_progress) return VisitStatus::Busy;
             if (it->second.visitOnce) return VisitStatus::Done;
+            it->second.visit_in_progress = true;
             return VisitStatus::Revisit;
         }
 
@@ -107,7 +111,7 @@ class Visitor::ChangeTracker {
         if (!final) {
             orig_visit_info->result = final;
             return true;
-        } else if (final != orig && *final != *orig) {
+        } else if (forceClone || (final != orig && *final != *orig)) {
             orig_visit_info->result = final;
             visited.emplace(final, visit_info_t{false, orig_visit_info->visitOnce, final});
             return true;
@@ -251,6 +255,7 @@ class Visitor::Tracker {
         if (!inserted) {  // We already seen this node, determine its status
             if (!it->second.done) return VisitStatus::Busy;
             if (it->second.visitOnce) return VisitStatus::Done;
+            it->second.done = false;
             return VisitStatus::Revisit;
         }
 
@@ -350,7 +355,7 @@ Visitor::profile_t Visitor::init_apply(const IR::Node *root, const Context *pare
 }
 Visitor::profile_t Modifier::init_apply(const IR::Node *root) {
     auto rv = Visitor::init_apply(root);
-    visited = std::make_shared<ChangeTracker>();
+    visited = std::make_shared<ChangeTracker>(forceClone);
     return rv;
 }
 Visitor::profile_t Inspector::init_apply(const IR::Node *root) {
@@ -360,44 +365,31 @@ Visitor::profile_t Inspector::init_apply(const IR::Node *root) {
 }
 Visitor::profile_t Transform::init_apply(const IR::Node *root) {
     auto rv = Visitor::init_apply(root);
-    visited = std::make_shared<ChangeTracker>();
+    visited = std::make_shared<ChangeTracker>(forceClone);
     return rv;
 }
 void Visitor::end_apply() {}
 void Visitor::end_apply(const IR::Node *) {}
 
 static indent_t profile_indent;
-static uint64_t first_start = 0;
+static absl::Time first_start = absl::InfinitePast();
+
 Visitor::profile_t::profile_t(Visitor &v_) : v(v_) {
-    struct timespec ts;
-#ifdef CLOCK_MONOTONIC
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-#else
-    // FIXME -- figure out how to do this on OSX/Mach
-    ts.tv_sec = ts.tv_nsec = 0;
-#endif
-    start = ts.tv_sec * 1000000000UL + ts.tv_nsec + 1;
-    assert(start);
+    start = absl::Now();
     LOG3(profile_indent << v.name() << " statrting at +"
-                        << (first_start ? start - first_start : (first_start = start, 0UL)) /
-                               1000000.0
-                        << " msec");
+                        << (first_start != absl::InfinitePast()
+                                ? start - first_start
+                                : (first_start = start, start - first_start)));
     ++profile_indent;
 }
-Visitor::profile_t::profile_t(profile_t &&a) : v(a.v), start(a.start) { a.start = 0; }
+Visitor::profile_t::profile_t(profile_t &&a) : v(a.v), start(a.start) {
+    a.start = absl::InfinitePast();
+}
 Visitor::profile_t::~profile_t() {
-    if (start) {
+    if (start != absl::InfinitePast()) {
         v.end_apply();
         --profile_indent;
-        struct timespec ts;
-#ifdef CLOCK_MONOTONIC
-        clock_gettime(CLOCK_MONOTONIC, &ts);
-#else
-        // FIXME -- figure out how to do this on OSX/Mach
-        ts.tv_sec = ts.tv_nsec = 0;
-#endif
-        uint64_t end = ts.tv_sec * 1000000000UL + ts.tv_nsec + 1;
-        LOG1(profile_indent << v.name() << ' ' << (end - start) / 1000.0 << " usec");
+        LOG1(profile_indent << v.name() << ' ' << (absl::Now() - start));
     }
 }
 
@@ -470,7 +462,7 @@ class ForwardChildren : public Visitor {
 }  // namespace
 
 const IR::Node *Modifier::apply_visitor(const IR::Node *n, const char *name) {
-    if (ctxt) ctxt->child_name = name;
+    if (ctxt && name) ctxt->child_name = name;
     if (n) {
         PushContext local(ctxt, n);
         switch (visited->try_start(n, visitDagOnce)) {
@@ -507,7 +499,7 @@ const IR::Node *Modifier::apply_visitor(const IR::Node *n, const char *name) {
 }
 
 const IR::Node *Inspector::apply_visitor(const IR::Node *n, const char *name) {
-    if (ctxt) ctxt->child_name = name;
+    if (ctxt && name) ctxt->child_name = name;
     if (n && !join_flows(n)) {
         PushContext local(ctxt, n);
         switch (visited->try_start(n, visitDagOnce)) {
@@ -535,7 +527,7 @@ const IR::Node *Inspector::apply_visitor(const IR::Node *n, const char *name) {
 }
 
 const IR::Node *Transform::apply_visitor(const IR::Node *n, const char *name) {
-    if (ctxt) ctxt->child_name = name;
+    if (ctxt && name) ctxt->child_name = name;
     if (n) {
         PushContext local(ctxt, n);
         switch (visited->try_start(n, visitDagOnce)) {
@@ -786,20 +778,20 @@ cstring Visitor::demangle(const char *str) {
     int status;
     cstring rv;
     if (char *n = abi::__cxa_demangle(str, 0, 0, &status)) {
-        rv = n;
+        rv = cstring(n);
         free(n);
     } else {
-        rv = str;
+        rv = cstring(str);
     }
     return rv;
 }
 #else
 #warning "No name demangling available; class names in logs will be mangled"
-cstring Visitor::demangle(const char *str) { return str; }
+cstring Visitor::demangle(const char *str) { return cstring(str); }
 #endif
 
 #if HAVE_LIBGC
-/** There's a bad interaction between the garbage collector and gcc's exception handling --
+/** There's a bad interaction between the garbage collector and GCC's exception handling --
  * the exception support code in glibstdc++ (specifically __cxa_allocate_exception) allocates
  * space for exceptions being throw with malloc (NOT with ::operrator new for some reason),
  * and the garbage collector does not scan the malloc heap for roots when garbage collecting

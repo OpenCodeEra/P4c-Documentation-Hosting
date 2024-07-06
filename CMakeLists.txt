@@ -40,18 +40,23 @@ OPTION (ENABLE_EBPF "Build the EBPF backend (required for the full test suite)" 
 OPTION (ENABLE_UBPF "Build the uBPF backend (required for the full test suite)" ON)
 OPTION (ENABLE_DPDK "Build the DPDK backend (required for the full test suite)" ON)
 OPTION (ENABLE_P4TC "Build the P4TC backend" ON)
+OPTION (ENABLE_P4FMT "Build the P4FMT backend" ON)
 OPTION (ENABLE_P4TEST "Build the P4Test backend (required for the full test suite)" ON)
 OPTION (ENABLE_TEST_TOOLS "Build the P4Tools development platform" OFF)
 OPTION (ENABLE_P4C_GRAPHS "Build the p4c-graphs backend" ON)
 OPTION (ENABLE_PROTOBUF_STATIC "Link against Protobuf statically" ON)
-OPTION (ENABLE_GC "Use libgc" ON)
-OPTION (ENABLE_MULTITHREAD "Use multithreading" OFF)
+OPTION (ENABLE_GC "Compile with the Boehm-Demers-Weiser garbage collector." ON)
 OPTION (ENABLE_WERROR "Treat warnings as errors" OFF)
 OPTION (ENABLE_SANITIZERS "Enable sanitizers" OFF)
-OPTION (BUILD_STATIC_RELEASE_SANS_GLIBC
-       "Build a (mostly) statically linked release binary. Glibc is linked dynamically." OFF
-)
-if (BUILD_STATIC_RELEASE_SANS_GLIBC)
+OPTION (STATIC_BUILD_WITH_DYNAMIC_GLIBC "Build a (mostly) statically linked release binary. \
+Glibc is linked dynamically. WARNING: This only works if all dependencies that depend on the C++ \
+standard library can be linked statically, otherwise the build will likely be broken and it will \
+likely depend on the standard libary anyway. If you have some non-static C++ dependencies, use \
+STATIC_BUILD_WITH_DYNAMIC_STDLIB." OFF)
+OPTION (STATIC_BUILD_WITH_DYNAMIC_STDLIB "Build a (mostly) statically linked release binary. \
+Glibc and C++ standard library is linked dynamically." OFF)
+
+if (STATIC_BUILD_WITH_DYNAMIC_GLIBC OR STATIC_BUILD_WITH_DYNAMIC_STDLIB)
     # We want to optimize the binary size for a static release binary by default.
     set (_ENABLE_LTO_DEFAULT ON)
 else()
@@ -98,11 +103,18 @@ else()
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
   set (P4C_VERSION "${P4C_SEM_VERSION_STRING} (SHA: ${P4C_GIT_SHA} BUILD: ${CMAKE_BUILD_TYPE})")
 endif()
+
 # P4 General Utilities
 include(P4CUtils)
 # CMake Utilities to fetch dependencies.
 include(FetchContent)
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
+# More utilities.
+include(CheckIncludeFile)
+include(CheckIncludeFileCXX)
+include(CheckFunctionExists)
+include(FindPythonModule)
+include(CPack)
 # TODO: Remove this deprecated include eventually.
 include(UnifiedBuild)
 
@@ -130,9 +142,15 @@ endif ()
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Set the required options for a (mostly) static release build.
-if(BUILD_STATIC_RELEASE_SANS_GLIBC)
+if(STATIC_BUILD_WITH_DYNAMIC_GLIBC OR STATIC_BUILD_WITH_DYNAMIC_STDLIB)
+  if (STATIC_BUILD_WITH_DYNAMIC_GLIBC AND STATIC_BUILD_WITH_DYNAMIC_STDLIB)
+    message(WARNING "Both STATIC_BUILD_WITH_DYNAMIC_GLIBC and STATIC_BUILD_WITH_DYNAMIC_STDLIB "
+      "enabled at once; using 'DYNAMIC_STDLIB' settings (dynamic glibc and c++ standard library).")
+  endif()
   message(STATUS "Building static release binaries")
-  message(WARNING "glibc is linked dynamically in current static builds.")
+  if (NOT STATIC_BUILD_WITH_DYNAMIC_STDLIB)
+    message(WARNING "glibc is linked dynamically in current static builds.")
+  endif()
   set(BUILD_SHARED_LIBS OFF)
   set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
   # Link Boost statically
@@ -146,8 +164,11 @@ if(BUILD_STATIC_RELEASE_SANS_GLIBC)
   # and see whether static linking improves on Linux.
   # Do not bring in dynamic libstdcc and libgcc
   set(CMAKE_EXE_LINKER_FLAGS
-      "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++ -Wl,-z,muldefs"
+      "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -Wl,-z,muldefs"
   )
+  if (NOT STATIC_BUILD_WITH_DYNAMIC_STDLIB)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++")
+  endif()
   add_definitions(-DP4C_STATIC_BUILD)
 endif()
 
@@ -184,6 +205,10 @@ p4c_obtain_abseil()
 include(Protobuf)
 p4c_obtain_protobuf()
 
+# We require -pthread to make std::call_once work, even if we're not using threads...
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
 # The boost graph headers are optional and only required by the graphs back end.
 find_package (Boost QUIET COMPONENTS graph)
 if (Boost_FOUND)
@@ -193,20 +218,17 @@ else ()
 endif ()
 find_package (Boost REQUIRED COMPONENTS iostreams)
 
+# Compile with the Boehm garbage collector (https://github.com/ivmai/bdwgc), if requested.
+# One can disable the GC, e.g., to run under Valgrind, by editing config.h.
 if (ENABLE_GC)
-  find_package (LibGc 7.4.2 REQUIRED)
-  set (HAVE_LIBGC 1)
+  include(BDWGC)
+  p4c_obtain_bdwgc()
 endif ()
 if (ENABLE_MULTITHREAD)
   add_definitions(-DMULTITHREAD)
 endif()
-# we require -pthread to make std::call_once work, even if we're not using threads...
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads REQUIRED)
 list (APPEND P4C_LIB_DEPS ${CMAKE_THREAD_LIBS_INIT})
 include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
-include_directories(SYSTEM ${PROTOBUF_INCLUDE_DIRS})
-include_directories(SYSTEM ${LIBGC_INCLUDE_DIR})
 set (HAVE_LIBBOOST_IOSTREAMS 1)
 list (APPEND P4C_LIB_DEPS ${Boost_LIBRARIES})
 if (ENABLE_GC)
@@ -215,19 +237,18 @@ endif ()
 set (P4C_ABSL_LIBRARIES absl::flat_hash_map absl::flat_hash_set)
 list (APPEND P4C_LIB_DEPS ${P4C_ABSL_LIBRARIES})
 
-# other required libraries
+# Other required libraries.
 p4c_add_library (rt clock_gettime HAVE_CLOCK_GETTIME)
 
-# check includes
-include (CheckIncludeFile)
-check_include_file (execinfo.h HAVE_EXECINFO_H)
-check_include_file (ucontext.h HAVE_UCONTEXT_H)
-check_include_file (backtrace-supported.h HAVE_LIBBACKTRACE)
-include (CheckIncludeFileCXX)
-check_include_file_cxx (cxxabi.h HAVE_CXXABI_H)
-
+# Check includes.
+check_include_file(execinfo.h HAVE_EXECINFO_H)
+check_include_file(ucontext.h HAVE_UCONTEXT_H)
+check_include_file(backtrace-supported.h HAVE_LIBBACKTRACE)
+check_include_file_cxx(mm_malloc.h HAVE_MM_MALLOC_H)
+check_include_file_cxx(cxxabi.h HAVE_CXXABI_H)
 if (HAVE_LIBBACKTRACE)
-set (P4C_LIB_DEPS "${P4C_LIB_DEPS};-lbacktrace")
+  message(STATUS "Linking libbacktrace.")
+  set (P4C_LIB_DEPS "${P4C_LIB_DEPS};-lbacktrace")
 endif ()
 
 # check functions
@@ -238,16 +259,13 @@ if (ENABLE_GC)
   set (CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} ${LIBGC_LIBRARIES})
 endif ()
 
-include (CheckFunctionExists)
 check_function_exists (memchr HAVE_MEMCHR)
 check_function_exists (pipe2 HAVE_PIPE2)
-check_function_exists (GC_print_stats HAVE_GC_PRINT_STATS)
 
 # restore CMAKE_REQUIRED_LIBRARIES
 set (CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES_PRECHECK})
 
 # python modules
-include (FindPythonModule)
 find_python_module (difflib REQUIRED)
 find_python_module (shutil REQUIRED)
 find_python_module (tempfile REQUIRED)
@@ -353,9 +371,9 @@ else()
 endif()
 
 include_directories (
-  ${P4C_SOURCE_DIR}/extensions
   ${P4C_SOURCE_DIR}
   ${P4C_BINARY_DIR}
+  ${P4C_SOURCE_DIR}/extensions
   )
 add_definitions (-DCONFIG_PREFIX="${CMAKE_INSTALL_PREFIX}")
 add_definitions (-DCONFIG_PKGDATADIR="${CMAKE_INSTALL_PREFIX}/${P4C_ARTIFACTS_OUTPUT_DIRECTORY}")
@@ -402,12 +420,12 @@ set(FETCHCONTENT_QUIET OFF)
 FetchContent_Declare(
   p4runtime
   GIT_REPOSITORY https://github.com/p4lang/p4runtime.git
-  GIT_TAG        1e771c4e05c4e7e250df00212b3ca02ee3202d71
+  GIT_TAG        62a9bd60599b87497a15feb6c7893b7ec8ba461f
   GIT_PROGRESS TRUE
 )
 FetchContent_MakeAvailable(p4runtime)
 set(FETCHCONTENT_QUIET ${FETCHCONTENT_QUIET_PREV})
-message("Done with setting up P4Runtime for P4C.")
+message(STATUS "Done with setting up P4Runtime for P4C.")
 # The standard P4Runtime protocol buffers message definitions live in the PI
 # repo, which is included in this repo as a git module.
 set(P4RUNTIME_STD_DIR ${p4runtime_SOURCE_DIR}/proto CACHE INTERNAL
@@ -461,6 +479,9 @@ if (ENABLE_P4TEST)
 endif ()
 if (ENABLE_TEST_TOOLS)
     add_subdirectory (backends/p4tools)
+endif ()
+if (ENABLE_P4FMT)
+    add_subdirectory (backends/p4fmt)
 endif ()
 if (ENABLE_UBPF)
     add_subdirectory (backends/ubpf)
@@ -525,18 +546,13 @@ add_custom_target(update_includes ALL
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${P4C_SOURCE_DIR}/p4include/*.p4 ${P4C_BINARY_DIR}/p4include
   COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4include/bmv2
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${P4C_SOURCE_DIR}/p4include/bmv2/psa.p4 ${P4C_BINARY_DIR}/p4include/bmv2
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4include/dpdk
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${P4C_SOURCE_DIR}/p4include/dpdk/psa.p4 ${P4C_BINARY_DIR}/p4include/dpdk
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${P4C_SOURCE_DIR}/p4include/dpdk/pna.p4 ${P4C_BINARY_DIR}/p4include/dpdk
   COMMAND for h in ${OTHER_HEADERS} \; do
     ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/\$$h ${P4C_BINARY_DIR}/p4include \;
   done
   )
-if (ENABLE_DPDK)
-add_custom_target(dpdk_includes ALL
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4include/dpdk
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${P4C_SOURCE_DIR}/p4include/dpdk/psa.p4 ${P4C_BINARY_DIR}/p4include/dpdk
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${P4C_SOURCE_DIR}/p4include/dpdk/pna.p4 ${P4C_BINARY_DIR}/p4include/dpdk
-  DEPENDS update_includes
-)
-endif()
 
 # Installation
 # Targets install themselves. Here we install the core headers
@@ -617,56 +633,5 @@ SET(CPACK_SOURCE_PACKAGE_FILE_NAME
    "p4c-${P4C_SEM_VERSION_STRING}")
 SET(CPACK_SOURCE_IGNORE_FILES
    "${PROJECT_SOURCE_DIR}/${CMAKE_PROJECT_NAME}-*;${PROJECT_SOURCE_DIR}/${CMAKE_PROJECT_NAME}_*;/build/;/.git/;/config.log;/CMakeFiles/;CMakeCache.txt$;.tar.gz$;/_CPack_Packages;/Makefile$;~$;/build-deb;/clean-deb;/filter-empty-entries;/make-symbols;/make-ppa;/make-deb;/debian.conf;/make-rpm;/rpm.conf;${CPACK_SOURCE_IGNORE_FILES}")
-INCLUDE(CPack)
 
 ADD_CUSTOM_TARGET(dist COMMAND ${CMAKE_MAKE_PROGRAM} clean package_source)
-
-#################### IWYU
-# Needs to be part of the top-level to be able to find all targets in the compiler framework.
-if(ENABLE_IWYU)
-  # Set up IWYU for P4C.
-  message("Enabling IWYU checks.")
-  find_program(iwyu_path NAMES include-what-you-use iwyu REQUIRED)
-  set(iwyu_path
-      ${iwyu_path}
-      -Xiwyu
-      --max_line_length=100
-      -Xiwyu
-      --no_fwd_decls
-      -Xiwyu
-      --cxx17ns
-      -Xiwyu
-      --mapping_file=${P4C_SOURCE_DIR}/tools/iwyu_mappings/p4c.imp
-  )
-  message("IWYU command: ${iwyu_path}")
-  function(get_all_targets var)
-    set(targets)
-    get_all_targets_recursive(targets ${CMAKE_CURRENT_SOURCE_DIR})
-    set(${var} ${targets} PARENT_SCOPE)
-  endfunction()
-
-  macro(get_all_targets_recursive targets dir)
-    get_property(subdirectories DIRECTORY ${dir} PROPERTY SUBDIRECTORIES)
-    foreach(subdir ${subdirectories})
-      get_all_targets_recursive(${targets} ${subdir})
-    endforeach()
-
-    get_property(current_targets DIRECTORY ${dir} PROPERTY BUILDSYSTEM_TARGETS)
-    list(APPEND ${targets} ${current_targets})
-  endmacro()
-
-  # Apply IWYU to all targets.
-  get_all_targets(all_targets)
-  # Remove generated files from IWYU.
-  list(FILTER all_targets EXCLUDE REGEX "controlplane-gen")
-  list(FILTER all_targets EXCLUDE REGEX "dpdk_runtime")
-  list(FILTER all_targets EXCLUDE REGEX "ir-generated")
-  list(FILTER all_targets EXCLUDE REGEX "genIR")
-  list(FILTER all_targets EXCLUDE REGEX "parser-gen")
-  list(FILTER all_targets EXCLUDE REGEX "gtest")
-  message("Applying IWYU to targets: ${all_targets}")
-  foreach(target ${all_targets})
-    set_property(TARGET ${target} PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${iwyu_path})
-  endforeach()
-
-endif()
