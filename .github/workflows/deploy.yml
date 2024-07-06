@@ -7,29 +7,26 @@ permissions:
 on:
     push:
         branches:
-        - Deploy-branch-Awsome-CSS
+        - main
 
-env:  
-    DOXYGEN_VERSION: 1.11.0
-    DOXYGEN_AWESOME_VERSION: 2.3.3
-  
+env:
+  DOXYGEN_VERSION: 1.11.0
+  DOXYGEN_AWESOME_VERSION: 2.3.3
+        
 jobs:
     build-and-deploy:
         runs-on: ubuntu-latest
-        concurrency: ci-${{github.ref}}
-        steps:          
-            - name: Checkout
+        concurrency: ci-${{github. ref}}
+        steps: 
+            - name : Checkout
               uses: actions/checkout@v4
 
-            - name: Install Dependencies
+            - name: Install Clang
               run: |
-                sudo apt-get update 
+                sudo apt-get update
                 sudo apt-get install -y clang
-                sudo apt-get install graphviz -y
-        
-              shell: bash
-
-            - name: "Doxygen Installation"
+            
+            - name: Install Doxygen 
               shell: bash
               run: |
                 wget https://github.com/doxygen/doxygen/releases/download/Release_${DOXYGEN_VERSION//./_}/doxygen-${DOXYGEN_VERSION}.linux.bin.tar.gz
@@ -38,19 +35,22 @@ jobs:
                 sudo make install
                 cd ..
                 rm -rf doxygen-${DOXYGEN_VERSION}*  
-            - name: Install Doxygen Awesome Themes
+            
+            - name: Install graphviz
+              run: sudo apt-get install graphviz -y
+
+            - name: Clone Doxygen Awesome CSS Themes
               working-directory: ./docs/doxygen
               run: |
-                git clone --depth 1 -b v${{ env.DOXYGEN_AWESOME_VERSION }} https://github.com/jothepro/doxygen-awesome-css
+                git clone --depth 1 -b v${{ env.DOXYGEN_AWESOME_VERSION }} https://github.com/jothepro/doxygen-awesome-css awesome_css
 
             - name: Generate Doxygen Documentation
               run: |
                    cd docs/doxygen
-                   doxygen -u doxygen.cfg
                    doxygen doxygen.cfg
               shell: bash
-
-            - name: Create .nojekyll
+            
+            - name: Create .nojekyll 
               run: |
                     cd docs/doxygen/build
                     touch html/.nojekyll
