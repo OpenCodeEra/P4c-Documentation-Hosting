@@ -1,3 +1,5 @@
+
+
 name: Automated Changelog Update
 
 on:
@@ -23,6 +25,9 @@ jobs:
       - name: Fetch tags
         run: git fetch --tags
 
+      - name: Check if release.yml exists
+        run: test -f .github/release.yml || (echo "release.yml not found" && exit 1)
+
       - name: Get changelog
         id: changelog
         run: |
@@ -30,8 +35,18 @@ jobs:
           GIT_LOG=$(git log $TAG..HEAD --pretty=format:"%H %s [%an]")
           CHANGELOG=""
 
+          # Check if yq can parse the file
+          if ! yq eval '.' .github/release.yml > /dev/null 2>&1; then
+            echo "Error parsing release.yml"
+            exit 1
+          fi
+
           # Read release.yml for categories
           CATEGORIES=$(yq eval '.changelog.categories' .github/release.yml)
+
+          TAG=$(git describe --tags --abbrev=0)
+          GIT_LOG=$(git log $TAG..HEAD --pretty=format:"%H %s [%an]")
+          CHANGELOG=""
 
           # Iterate over categories
           for i in $(seq 0 $(echo "$CATEGORIES" | yq eval 'length' -)); do
