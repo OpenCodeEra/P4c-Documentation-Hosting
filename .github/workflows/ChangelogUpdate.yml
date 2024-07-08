@@ -14,6 +14,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install yq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pip
+          pip3 install yq
+
       - name: Get changelog
         id: changelog
         run: |
@@ -25,9 +31,9 @@ jobs:
           CATEGORIES=$(yq eval '.changelog.categories' .github/release.yml)
 
           # Iterate over categories
-          for CATEGORY in $(echo "$CATEGORIES" | yq eval 'keys' -); do
-            TITLE=$(echo "$CATEGORIES" | yq eval ".$CATEGORY.title" -)
-            LABELS=$(echo "$CATEGORIES" | yq eval ".$CATEGORY.labels[]" -)
+          for i in $(seq 0 $(echo "$CATEGORIES" | yq eval '. | length - 1' -)); do
+            TITLE=$(echo "$CATEGORIES" | yq eval ".[$i].title" -)
+            LABELS=$(echo "$CATEGORIES" | yq eval ".[$i].labels[]" -)
             CHANGELOG="${CHANGELOG}### ${TITLE}\n"
 
             # Get log entries for each label
@@ -54,6 +60,7 @@ jobs:
         run: |
           NEW_CHANGELOG="${{ steps.changelog.outputs.content }}"
           sed -i '/## Semantic Versioning/{:a;n;/##/!ba;i\\n'"${NEW_CHANGELOG}"'\\n' changelog.md
+          cat changelog.md
 
       - name: Commit and push changelog update
         run: |
