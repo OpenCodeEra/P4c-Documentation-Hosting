@@ -20,6 +20,9 @@ jobs:
           sudo apt-get install -y python3-pip
           pip3 install yq
 
+      - name: Fetch tags
+        run: git fetch --tags
+
       - name: Get changelog
         id: changelog
         run: |
