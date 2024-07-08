@@ -46,7 +46,6 @@ jobs:
 
           TAG=$(git describe --tags --abbrev=0)
           GIT_LOG=$(git log $TAG..HEAD --pretty=format:"%H %s [%an]")
-          CHANGELOG=""
 
           # Iterate over categories
           for i in $(seq 0 $(echo "$CATEGORIES" | yq eval 'length' -)); do
