@@ -1,0 +1,64 @@
+name: Automated Changelog Update
+
+on:
+  push:
+    tags:
+      - 'v*.*.*' # Trigger the workflow on version tags
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changelog
+        id: changelog
+        run: |
+          TAG=$(git describe --tags --abbrev=0)
+          GIT_LOG=$(git log $TAG..HEAD --pretty=format:"%H %s [%an]")
+          CHANGELOG=""
+
+          # Read release.yml for categories
+          CATEGORIES=$(yq eval '.changelog.categories' .github/release.yml)
+
+          # Iterate over categories
+          for CATEGORY in $(echo "$CATEGORIES" | yq eval 'keys' -); do
+            TITLE=$(echo "$CATEGORIES" | yq eval ".$CATEGORY.title" -)
+            LABELS=$(echo "$CATEGORIES" | yq eval ".$CATEGORY.labels[]" -)
+            CHANGELOG="${CHANGELOG}### ${TITLE}\n"
+
+            # Get log entries for each label
+            for LABEL in $LABELS; do
+              LOG_ENTRIES=$(echo "$GIT_LOG" | grep -i "$LABEL")
+              if [ -n "$LOG_ENTRIES" ]; then
+                CHANGELOG="${CHANGELOG}${LOG_ENTRIES}\n"
+              fi
+            done
+          done
+
+          # Escape special characters
+          CHANGELOG="${CHANGELOG//'%'/'%25'}"
+          CHANGELOG="${CHANGELOG//$'\n'/'%0A'}"
+          CHANGELOG="${CHANGELOG//$'\r'/'%0D'}"
+          CHANGELOG="${CHANGELOG//'#'/''}"
+
+          echo "::set-output name=content::$CHANGELOG"
+
+      - name: Display changelog
+        run: echo "${{ steps.changelog.outputs.content }}"
+
+      - name: Update changelog
+        run: |
+          NEW_CHANGELOG="${{ steps.changelog.outputs.content }}"
+          sed -i '/## Semantic Versioning/{:a;n;/##/!ba;i\\n'"${NEW_CHANGELOG}"'\\n' changelog.md
+
+      - name: Commit and push changelog update
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add changelog.md
+          git commit -m "Update changelog for release ${{ github.ref }}"
+          git push origin main
