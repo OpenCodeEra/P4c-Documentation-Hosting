@@ -34,7 +34,7 @@ jobs:
           CATEGORIES=$(yq eval '.changelog.categories' .github/release.yml)
 
           # Iterate over categories
-          for i in $(seq 0 $(echo "$CATEGORIES" | yq eval 'length' - 1)); do
+          for i in $(seq 0 $(echo "$CATEGORIES" | yq eval 'length' -)); do
             TITLE=$(echo "$CATEGORIES" | yq eval ".[$i].title" -)
             LABELS=$(echo "$CATEGORIES" | yq eval ".[$i].labels[]" -)
             CHANGELOG="${CHANGELOG}### ${TITLE}\n"
