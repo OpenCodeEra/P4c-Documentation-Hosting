@@ -22,6 +22,8 @@ jobs:
       DOXYGEN_AWESOME_VERSION: 2.3.3
       PR_PATH: pr-preview/${{github.event.number}}
       DOMAIN: ${{github.actor}}.github.io
+      LOADING: <img src="https://github.com/user-attachments/assets/bc1b11f6-0e74-40df-a78a-fb7191e5beed" alt="githubloading" width="30"/>
+      CELEBRATION: <img src="https://github.com/user-attachments/assets/86eb8470-c597-4f8b-a77d-a54036075271" alt="githubloading" width="30"/>
 
     concurrency: ci-${{ github.ref }}
     steps:
@@ -33,7 +35,7 @@ jobs:
           repository: ${{ github.repository }}
           number: ${{ github.event.number }}
           id: deploy-preview
-          message: "Starting deployment of preview ⏳..."
+          message: "${{ env.lOADING }} **Deployment of preview started...**"
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -100,4 +102,4 @@ jobs:
           repository: ${{ github.repository }}
           number: ${{ github.event.pull_request.number }}
           id: deploy-preview
-          message: "A preview of this PR is available at: [Preview Link](https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/${{ env.PR_PATH}}/)\n\nChanges may take a few minutes to propagate. Since this is a preview of production, content with `draft: true` will not be rendered. The source is here: https://github.com/${{ github.repository }}/tree/gh-pages/pr-${{ github.event.number }}/"
+          message: "A preview of this PR is available at: [Preview Link](https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/${{ env.PR_PATH}}/) ${{ env.CELEBRATION }}\n\n 📂 **View the source code here:** https://github.com/${{ github.repository }}/tree/gh-pages/pr-${{ github.event.number }}/"
