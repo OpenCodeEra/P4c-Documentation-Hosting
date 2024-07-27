@@ -28,14 +28,13 @@ jobs:
     concurrency: ci-${{ github.ref }}
     steps:
       - name: Comment on PR
-        uses: hasura/comment-progress@v2.2.0
+        uses: actions/github-script@v6
         if: github.ref != 'refs/heads/Deploy-branch-Awsome-CSS'
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ github.repository }}
-          number: ${{ github.event.number }}
-          id: deploy-preview
-          message: " **🚀Deployment of preview started...**"
+          script: |
+            github.rest.issues.createComment({
+              status: '**🚀Deployment of preview started...**',
+            })
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -95,11 +94,10 @@ jobs:
           clean: false
 
       - name: Comment on PR with preview link
-        if: github.ref != 'refs/heads/Deploy-branch-Awsome-CSS'
-        uses: hasura/comment-progress@v2.2.0
+        if: github.ref != 'refs/heads/Deploy-branch-Awsome-CSS'    
+        uses: actions/github-script@v6 
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ github.repository }}
-          number: ${{ github.event.pull_request.number }}
-          id: deploy-preview
-          message: "A preview of this PR is available at: [Preview Link](https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/${{ env.PR_PATH}}/) ${{ env.CELEBRATION }}\n\n 📂 **View the source code here:** https://github.com/${{ github.repository }}/tree/gh-pages/pr-${{ github.event.number }}/"
+            script: |
+              github.rest.issues.createComment({
+                status: 'A preview of this PR is available at: [Preview Link](https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/${{ env.PR_PATH}}/) ${{ env.CELEBRATION }}\n\n 📂 **View the source code here:** https://github.com/${{ github.repository }}/tree/gh-pages/pr-${{ github.event.number }}/',
+              })
