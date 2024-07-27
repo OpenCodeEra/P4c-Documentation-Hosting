@@ -27,12 +27,21 @@ jobs:
 
     concurrency: ci-${{ github.ref }}
     steps:
-      - name: Comment on PR
-        uses: mb2dev/github-action-comment-pull-request@1.0.0
-        if: github.ref != 'refs/heads/Deploy-branch-Awsome-CSS'
+      - name: Create comment
+        uses: peter-evans/create-or-update-comment@v4
         with:
-          message: "**🚀Deployment of preview started...**"
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          comment-id: ${{ steps.fc.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            **🚀Deployment of preview started...**
+            - With GitHub **Markdown** :sparkles:
+
+      # - name: Comment on PR
+      #   uses: mb2dev/github-action-comment-pull-request@1.0.0
+      #   if: github.ref != 'refs/heads/Deploy-branch-Awsome-CSS'
+      #   with:
+      #     message: "**🚀Deployment of preview started...**"
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # script: |
           #   github.rest.issues.createComment({
           #   issue_number: context.issue.number,
