@@ -1,28 +1,40 @@
 name: Build Doxygen and Deploy to GitHub Pages
 
-permissions:
-  actions: read
-  contents: write
-  pages: write
-  issues: write 
+# permissions:
+#   actions: read
+#   contents: write
+#   pages: write
+#   issues: write 
 
 on:
   push:
     branches:
       - Deploy-branch-Awsome-CSS
   pull_request:
-    types: [opened, synchronize]
+    # types: [opened, synchronize]
 
-env:
-  DOXYGEN_VERSION: 1.11.0
-  DOXYGEN_AWESOME_VERSION: 2.3.3
-  DOMAIN: ${{ github.actor }}.github.io  # Default GitHub Pages domain
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      DOXYGEN_VERSION: 1.11.0
+      DOXYGEN_AWESOME_VERSION: 2.3.3
+      PR_PATH: pull/${{github.event.number}}
+      DOMAIN: ${{github.actor}}.github.io
+
     concurrency: ci-${{ github.ref }}
     steps:
+      - name: Comment on PR
+        uses: hasura/comment-progress@v2.2.0
+        if: github.ref != 'refs/heads/Deploy-branch-Awsome-CSS'
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          number: ${{ github.event.number }}
+          id: deploy-preview
+          message: "Starting deployment of preview ⏳..."
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -58,6 +70,9 @@ jobs:
           cd docs/doxygen/build/html
           touch .nojekyll
 
+      - name: Set production base URL
+        run: echo "BASE_URL=https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/" >> $GITHUB_ENV
+
       - name: Deploy to GitHub Pages (Main Branch)
         if: github.ref == 'refs/heads/Deploy-branch-Awsome-CSS'
         uses: JamesIves/github-pages-deploy-action@v4
@@ -70,11 +85,11 @@ jobs:
             pr-previews/**
 
       - name: Set base URL for PR preview
-        if: github.event_name == 'pull_request'
+        if: github.ref != 'refs/heads/Deploy-branch-Awsome-CSS'
         run: echo "BASE_URL=https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/pr-${{ github.event.number }}/" >> $GITHUB_ENV
 
       - name: Deploy to PR preview
-        if: github.event_name == 'pull_request'
+        if: github.ref != 'refs/heads/Deploy-branch-Awsome-CSS'
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -84,7 +99,7 @@ jobs:
           clean: false
 
       - name: Comment on PR with preview link
-        if: github.event_name == 'pull_request'
+        if: github.ref != 'refs/heads/Deploy-branch-Awsome-CSS'
         uses: hasura/comment-progress@v2.2.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
