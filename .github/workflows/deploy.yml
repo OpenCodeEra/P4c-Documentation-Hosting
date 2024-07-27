@@ -20,7 +20,7 @@ jobs:
     env:
       DOXYGEN_VERSION: 1.11.0
       DOXYGEN_AWESOME_VERSION: 2.3.3
-      PR_PATH: pr-preview/${{ github.event.pull_request.number }}
+      PR_PATH: pr-preview/${{ github.event.number }}
       DOMAIN: ${{ github.actor }}.github.io
       CELEBRATION: '<img src="https://github.com/user-attachments/assets/86eb8470-c597-4f8b-a77d-a54036075271" alt="githubloading" width="30"/>'
 
