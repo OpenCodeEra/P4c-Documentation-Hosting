@@ -20,12 +20,15 @@ jobs:
     env:
       DOXYGEN_VERSION: 1.11.0
       DOXYGEN_AWESOME_VERSION: 2.3.3
-      PR_PATH: pr-preview/${{github.event.number}}
-      DOMAIN: ${{github.actor}}.github.io
+      PR_PATH: pr-preview/${{ github.event.number }}
+      DOMAIN: ${{ github.actor }}.github.io
       CELEBRATION: '<img src="https://github.com/user-attachments/assets/86eb8470-c597-4f8b-a77d-a54036075271" alt="githubloading" width="30"/>'
 
     concurrency: ci-${{ github.ref }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Find Comment
         if: github.ref != 'refs/heads/Deploy-branch-Awsome-CSS'
         uses: peter-evans/find-comment@v3
@@ -44,9 +47,6 @@ jobs:
             <img src="https://github.com/user-attachments/assets/f94fada5-45ca-4271-9106-180728235ad2" alt="Rocket" width="30"/>
             **Deployment of preview started...**
           reactions: rocket
-
-      - name: Checkout
-        uses: actions/checkout@v4
 
       - name: Install Clang
         run: |
