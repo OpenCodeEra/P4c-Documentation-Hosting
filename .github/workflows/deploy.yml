@@ -112,10 +112,8 @@ jobs:
         if: github.ref != 'refs/heads/Deploy-branch-Awsome-CSS'    
         uses: actions/github-script@v6 
         with:
-            script: |
-              github.rest.issues.createComment({   
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: 'A preview of this PR is available at: [Preview Link](https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/${{ env.PR_PATH}}/) ${{ env.CELEBRATION }}\n\n 📂 **View the source code here:** https://github.com/${{ github.repository }}/tree/gh-pages/pr-${{ github.event.number }}/',
-              })
+          comment-id: ${{ steps.fc.outputs.comment-id }}
+          body: |
+            A preview of this PR is available at: [Preview Link](https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/${{ env.PR_PATH}}/) ${{ env.CELEBRATION }}\n\n 📂 **View the source code here:** https://github.com/${{ github.repository }}/tree/gh-pages/pr-${{ github.event.number }}/'
+          reactions: hooray
+
