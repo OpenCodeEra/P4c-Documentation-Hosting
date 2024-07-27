@@ -79,7 +79,7 @@ jobs:
           folder: docs/doxygen/build/html
           clean: true
           clean-exclude: |
-            pr-preview/**
+            pr-preview/
 
 
       - name: Deploy to PR preview
