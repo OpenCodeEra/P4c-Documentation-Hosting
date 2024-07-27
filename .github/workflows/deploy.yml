@@ -70,9 +70,6 @@ jobs:
           cd docs/doxygen/build/html
           touch .nojekyll
 
-      - name: Set production base URL
-        run: echo "BASE_URL=https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/" >> $GITHUB_ENV
-
       - name: Deploy to GitHub Pages (Main Branch)
         if: github.ref == 'refs/heads/Deploy-branch-Awsome-CSS'
         uses: JamesIves/github-pages-deploy-action@v4
@@ -84,9 +81,6 @@ jobs:
           clean-exclude: |
             pr-preview/**
 
-      - name: Set base URL for PR preview
-        if: github.ref != 'refs/heads/Deploy-branch-Awsome-CSS'
-        run: echo "BASE_URL=https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/pr-${{ github.event.number }}/" >> $GITHUB_ENV
 
       - name: Deploy to PR preview
         if: github.ref != 'refs/heads/Deploy-branch-Awsome-CSS'
@@ -106,4 +100,4 @@ jobs:
           repository: ${{ github.repository }}
           number: ${{ github.event.pull_request.number }}
           id: deploy-preview
-          message: "A preview of this PR is available at: [Preview Link](${ env.BASE_URL })\n\nChanges may take a few minutes to propagate. Since this is a preview of production, content with `draft: true` will not be rendered. The source is here: https://github.com/${{ github.repository }}/tree/gh-pages/pr-${{ github.event.number }}/"
+          message: "A preview of this PR is available at: [Preview Link](https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/pr-${{ github.event.number }}/)\n\nChanges may take a few minutes to propagate. Since this is a preview of production, content with `draft: true` will not be rendered. The source is here: https://github.com/${{ github.repository }}/tree/gh-pages/pr-${{ github.event.number }}/"
