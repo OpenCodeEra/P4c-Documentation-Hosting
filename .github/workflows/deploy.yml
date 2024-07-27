@@ -48,10 +48,6 @@ jobs:
             **Deployment of preview started...**
           reactions: rocket
 
-      - name: Debug Comment ID
-        if: github.ref != 'refs/heads/Deploy-branch-Awsome-CSS'
-        run: echo "Comment ID: ${{ steps.fc.outputs.comment-id }}" 
-
       - name: Install Clang
         run: |
           sudo apt-get update
