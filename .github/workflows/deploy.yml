@@ -85,7 +85,10 @@ jobs:
 
       - name: Comment on PR with preview link
         if: github.event_name == 'pull_request'
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: hasura/comment-progress@v2.2.0
         with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          message: "A preview of this PR is available at: [Preview Link](${env.BASE_URL})"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          number: ${{ github.event.pull_request.number }}
+          id: deploy-preview
+          message: "A preview of this PR is available at: [Preview Link](${ env.BASE_URL })\n\nChanges may take a few minutes to propagate. Since this is a preview of production, content with `draft: true` will not be rendered. The source is here: https://github.com/${{ github.repository }}/tree/gh-pages/pr-${{ github.event.number }}/"
