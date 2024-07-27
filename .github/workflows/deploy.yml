@@ -20,7 +20,7 @@ jobs:
     env:
       DOXYGEN_VERSION: 1.11.0
       DOXYGEN_AWESOME_VERSION: 2.3.3
-      PR_PATH: pr-preview/${{ github.event.number }}
+      PR_PATH: pr-preview/${{ github.event.pull_request.number }}
       DOMAIN: ${{ github.actor }}.github.io
       CELEBRATION: '<img src="https://github.com/user-attachments/assets/86eb8470-c597-4f8b-a77d-a54036075271" alt="githubloading" width="30"/>'
 
@@ -98,15 +98,15 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: gh-pages
           folder: docs/doxygen/build/html
-          target-folder: ${{ env.PR_PATH }} 
+          target-folder: ${{ env.PR_PATH }}
           clean: false
 
       - name: Update Comment with Preview Link
-        if: github.event_name == 'pull_request_target'
+        if: github.ref != 'refs/heads/Deploy-branch-Awsome-CSS'
         uses: peter-evans/create-or-update-comment@v4
         with:
           comment-id: ${{ steps.find-comment.outputs.comment-id }}
           issue-number: ${{ github.event.pull_request.number }}
           body: |
-            A preview of this PR is available at: [Preview Link](https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/${{ env.PR_PATH }}/) ${{ env.CELEBRATION }}\n\n 📂 **View the source code here:** https://github.com/${{ github.repository }}/tree/gh-pages/pr-preview/${{ github.event.number }}/
+            A preview of this PR is available at: [Preview Link](https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/${{ env.PR_PATH }}/) ${{ env.CELEBRATION }} \n\n 📂 **View the source code here:** https://github.com/${{ github.repository }}/tree/gh-pages/pr-preview/${{ github.event.pull_request.number }}/
           reactions: hooray
