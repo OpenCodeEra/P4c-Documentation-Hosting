@@ -38,7 +38,7 @@ jobs:
           body-includes: 'Deployment of preview started...'
 
       - name: Post Initial Comment
-        if: github.ref != 'refs/heads/Deploy-branch-Awsome-CSS' && steps.find-comment.outputs.comment-id == '' 
+        if: ${{ github.event_name == 'pull_request_target' && steps.find-comment.outputs.comment-id == '' }}
         id: post-initial-comment
         uses: peter-evans/create-or-update-comment@v4
         with:
@@ -102,7 +102,7 @@ jobs:
           clean: false
 
       - name: Update Comment with Preview Link
-        if: github.ref != 'refs/heads/Deploy-branch-Awsome-CSS'
+        if: github.ref != 'refs/heads/Deploy-branch-Awsome-CSS' && steps.find-comment.outputs.comment-id != ''
         uses: peter-evans/create-or-update-comment@v4
         with:
           comment-id: ${{ steps.find-comment.outputs.comment-id }}
