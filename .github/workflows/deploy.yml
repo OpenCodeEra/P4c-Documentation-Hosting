@@ -4,7 +4,7 @@ permissions:
   actions: read
   contents: write
   pages: write
-  issues: write 
+  issues: write
   pull-requests: write
 
 on:
@@ -28,35 +28,25 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
-      - name: Find Comment preview link
-        if: github.ref != 'refs/heads/Deploy-branch-Awsome-CSS'
-        uses: peter-evans/find-comment@v3
-        id: fc2
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          comment-author: 'github-actions[bot]'
-          body-includes: 'A preview of this PR'
 
-      - name: Deploy comment
-        if: github.ref != 'refs/heads/Deploy-branch-Awsome-CSS'
-        uses: peter-evans/create-or-update-comment@v4
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          body: | 
-            **Deployment of preview started...**
-            <img src="https://github.com/user-attachments/assets/f94fada5-45ca-4271-9106-180728235ad2" alt="Rocket" width="30"/>
-            
-          reactions: rocket
-      
-      - name: Find Comment for Deployment
-        if: github.ref != 'refs/heads/Deploy-branch-Awsome-CSS'
+      - name: Find Existing Comment
+        id: find-comment
         uses: peter-evans/find-comment@v3
-        id: fc
         with:
           issue-number: ${{ github.event.pull_request.number }}
           comment-author: 'github-actions[bot]'
           body-includes: 'Deployment of preview started...'
+
+      - name: Post Initial Comment
+        if: github.ref != 'refs/heads/Deploy-branch-Awsome-CSS' && steps.find-comment.outputs.comment-id == '' 
+        id: post-initial-comment
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            <img src="https://github.com/user-attachments/assets/f94fada5-45ca-4271-9106-180728235ad2" alt="Rocket" width="30"/>
+             **Deployment of preview started...**
+          reactions: rocket
 
       - name: Install Clang
         run: |
@@ -108,14 +98,15 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: gh-pages
           folder: docs/doxygen/build/html
-          target-folder: ${{ env.PR_PATH }} 
+          target-folder: ${{ env.PR_PATH }}
           clean: false
 
-      - name: Comment on PR with preview link
-        if: github.ref != 'refs/heads/Deploy-branch-Awsome-CSS' && steps.fc.outputs.comment-id != ''
+      - name: Update Comment with Preview Link
+        if: github.ref != 'refs/heads/Deploy-branch-Awsome-CSS'
         uses: peter-evans/create-or-update-comment@v4
         with:
-          comment-id: ${{ steps.fc.outputs.comment-id }}
+          comment-id: ${{ steps.find-comment.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
           body: |
-            A preview of this PR is available at: [Preview Link](https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/${{ env.PR_PATH }}/) ${{ env.CELEBRATION }}\n\n 📂 **View the source code here:** https://github.com/${{ github.repository }}/tree/gh-pages/pr-preview/${{ github.event.number }}/
+            A preview of this PR is available at: [Preview Link](https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/${{ env.PR_PATH }}/) ${{ env.CELEBRATION }} \n\n 📂 **View the source code here:** https://github.com/${{ github.repository }}/tree/gh-pages/pr-preview/${{ github.event.pull_request.number }}/
           reactions: hooray
