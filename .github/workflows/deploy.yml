@@ -33,7 +33,10 @@ jobs:
         with:
           script: |
             github.rest.issues.createComment({
-              status: '**🚀Deployment of preview started...**',
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '**🚀Deployment of preview started...**',
             })
 
       - name: Checkout
@@ -98,6 +101,9 @@ jobs:
         uses: actions/github-script@v6 
         with:
             script: |
-              github.rest.issues.createComment({
-                status: 'A preview of this PR is available at: [Preview Link](https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/${{ env.PR_PATH}}/) ${{ env.CELEBRATION }}\n\n 📂 **View the source code here:** https://github.com/${{ github.repository }}/tree/gh-pages/pr-${{ github.event.number }}/',
+              github.rest.issues.createComment({   
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: 'A preview of this PR is available at: [Preview Link](https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/${{ env.PR_PATH}}/) ${{ env.CELEBRATION }}\n\n 📂 **View the source code here:** https://github.com/${{ github.repository }}/tree/gh-pages/pr-${{ github.event.number }}/',
               })
