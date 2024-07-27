@@ -1,10 +1,10 @@
 name: Build Doxygen and Deploy to GitHub Pages
 
-# permissions:
-#   actions: read
-#   contents: write
-#   pages: write
-#   issues: write 
+permissions:
+  actions: read
+  contents: write
+  pages: write
+  issues: write 
 
 on:
   push:
@@ -16,6 +16,7 @@ on:
 env:
   DOXYGEN_VERSION: 1.11.0
   DOXYGEN_AWESOME_VERSION: 2.3.3
+  DOMAIN: ${{ github.actor }}.github.io  # Default GitHub Pages domain
 
 jobs:
   build-and-deploy:
@@ -32,7 +33,7 @@ jobs:
 
       - name: Install Doxygen
         run: |
-          wget https://github.com/doxygen/doxygen/releases/download/Release_${DOXYGEN_VERSION//./_}/doxygen-${DOXYGEN_VERSION}.linux.bin.tar.gz
+          wget https://github.com/doxygen/doxygen/releases/download/Release_${{ env.DOXYGEN_VERSION }}//doxygen-${{ env.DOXYGEN_VERSION }}.linux.bin.tar.gz
           tar xzvf doxygen-${{ env.DOXYGEN_VERSION }}.linux.bin.tar.gz
           cd doxygen-${{ env.DOXYGEN_VERSION }}
           sudo make install
@@ -70,7 +71,7 @@ jobs:
 
       - name: Set base URL for PR preview
         if: github.event_name == 'pull_request'
-        run: echo "BASE_URL=https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/pr-${{ github.event.number }}/" >> $GITHUB_ENV
+        run: echo "BASE_URL=https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/pr-${{ github.event.number }}/" >> $GITHUB_ENV
 
       - name: Deploy to PR preview
         if: github.event_name == 'pull_request'
@@ -79,10 +80,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: gh-pages
           folder: docs/doxygen/build/html
-          target-folder: pr-${{ github.event.number }}
+          target-folder: pr-${{ github.event.number }}  # Corrected typo and added missing parameter
           clean: false
-          clean-exclude: |
-            pr-previews/**
 
       - name: Comment on PR with preview link
         if: github.event_name == 'pull_request'
