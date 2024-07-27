@@ -31,7 +31,7 @@ jobs:
 
       - name: Install Doxygen
         run: |
-          wget https://github.com/doxygen/doxygen/releases/download/Release_${{ env.DOXYGEN_VERSION // ./_ }}/doxygen-${{ env.DOXYGEN_VERSION }}.linux.bin.tar.gz
+          wget https://github.com/doxygen/doxygen/releases/download/Release_${DOXYGEN_VERSION//./_}/doxygen-${DOXYGEN_VERSION}.linux.bin.tar.gz
           tar xzvf doxygen-${{ env.DOXYGEN_VERSION }}.linux.bin.tar.gz
           cd doxygen-${{ env.DOXYGEN_VERSION }}
           sudo make install
@@ -88,4 +88,4 @@ jobs:
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          message: "A preview of this PR is available at: [Preview Link](${{env.BASE_URL}})"
+          message: "A preview of this PR is available at: [Preview Link](${env.BASE_URL})"
