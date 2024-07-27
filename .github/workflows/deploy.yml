@@ -100,4 +100,4 @@ jobs:
           repository: ${{ github.repository }}
           number: ${{ github.event.pull_request.number }}
           id: deploy-preview
-          message: "A preview of this PR is available at: [Preview Link](https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/pr-${{ github.event.number }}/)\n\nChanges may take a few minutes to propagate. Since this is a preview of production, content with `draft: true` will not be rendered. The source is here: https://github.com/${{ github.repository }}/tree/gh-pages/pr-${{ github.event.number }}/"
+          message: "A preview of this PR is available at: [Preview Link](https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/${{ env.PR_PATH}}/)\n\nChanges may take a few minutes to propagate. Since this is a preview of production, content with `draft: true` will not be rendered. The source is here: https://github.com/${{ github.repository }}/tree/gh-pages/pr-${{ github.event.number }}/"
