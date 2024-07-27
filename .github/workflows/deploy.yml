@@ -28,6 +28,7 @@ jobs:
     concurrency: ci-${{ github.ref }}
     steps:
       - name: Create comment
+        if: github.ref != 'refs/heads/Deploy-branch-Awsome-CSS'
         uses: peter-evans/create-or-update-comment@v4
         with:
           comment-id: ${{ steps.fc.outputs.comment-id }}
