@@ -30,6 +30,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Find Existing Comment
+        if: ${{ github.event_name == 'pull_request_target' }}
         id: find-comment
         uses: peter-evans/find-comment@v3
         with:
