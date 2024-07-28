@@ -124,7 +124,7 @@ jobs:
           comment-id: ${{ steps.find-comment.outputs.comment-id }}
           issue-number: ${{ github.event.pull_request.number }}
           body: |
-            **A preview of this PR is available at:** [Preview Link](https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/${{ env.PR_PATH }}/) ${{ env.CELEBRATION }}
+            ${{ env.CELEBRATION }} **A preview of this PR is available at:** [Preview Link](https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/${{ env.PR_PATH }}/) 
             📂 **View the source code here:** [View Source Code](https://github.com/${{ github.repository }}/tree/gh-pages/pr-preview/${{ github.event.pull_request.number }})
             ${{ env.COMMENT_IDENTIFIER }}
           reactions: hooray
