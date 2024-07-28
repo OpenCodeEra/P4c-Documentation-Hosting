@@ -132,4 +132,14 @@ jobs:
             🔧 **Commit used for deployment:** [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
             ${{ env.COMMENT_IDENTIFIER }}
           edit-mode: replace     
-               
+
+      - name: Update Comment with Failure Message
+        if: failure() && github.event_name == 'pull_request_target'
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ steps.find-comment.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ${{ env.FAILURE_ICON }} **Deployment of this PR failed.** Please check the [Actions logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for more details.
+            ${{ env.COMMENT_IDENTIFIER }}
+          edit-mode: replace
