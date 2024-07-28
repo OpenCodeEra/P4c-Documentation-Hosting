@@ -24,6 +24,7 @@ jobs:
       DOMAIN: ${{ github.actor }}.github.io
       DEPLOYMENT: '<img src="https://github.com/user-attachments/assets/f94fada5-45ca-4271-9106-180728235ad2" alt="Rocket" width="25"/>'
       CELEBRATION: '<img src="https://github.com/user-attachments/assets/86eb8470-c597-4f8b-a77d-a54036075271" alt="githubloading" width="25"/>'
+      FAILURE_ICON: '<img src="https://github.com/user-attachments/assets/86eb8470-c597-4f8b-a77d-a54036075271" alt="failed" width="25"/>'
       COMMENT_IDENTIFIER: '<!-- preview-comment -->'
 
     concurrency: ci-${{ github.ref }}
@@ -129,3 +130,33 @@ jobs:
             ${{ env.COMMENT_IDENTIFIER }}
           reactions: hooray
           edit-mode: replace
+
+      - name: Post Failure Comment
+        if: ${{ github.event_name == 'pull_request_target' && failure() }}
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { context } = require('@actions/github');
+            const issue_number = context.payload.pull_request.number;
+            const commentIdentifier = process.env.COMMENT_IDENTIFIER;
+            const body = `
+              **Deployment failed.** ${process.env.FAILURE_ICON}
+              ${commentIdentifier}
+              <br>
+              🔗 **View the workflow run logs:** [Logs](${context.run.html_url})
+            `;
+
+            const existingComment = steps.find-comment.outputs.comment-id;
+            if (existingComment) {
+              await github.rest.issues.updateComment({
+                ...context.repo,
+                comment_id: existingComment,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number,
+                body: body
+              });
+            }
