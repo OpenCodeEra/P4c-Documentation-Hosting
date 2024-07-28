@@ -82,7 +82,7 @@ jobs:
           touch .nojekyll
 
       - name: Deploy to GitHub Pages (Main Branch)
-        if: github.ref == 'refs/heads/Deploy-branch-Awsome-CSS'
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/Deploy-branch-Awsome-CSS' }}
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -93,7 +93,7 @@ jobs:
             pr-preview/
 
       - name: Deploy to PR preview
-        if: github.ref != 'refs/heads/Deploy-branch-Awsome-CSS'
+        if: ${{ github.event_name == 'pull_request_target' }}
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -103,7 +103,7 @@ jobs:
           clean: false
 
       - name: Update Comment with Preview Link
-        if: github.ref != 'refs/heads/Deploy-branch-Awsome-CSS' && steps.find-comment.outputs.comment-id != ''
+        if: ${{ github.event_name == 'pull_request_target' && steps.find-comment.outputs.comment-id != '' }}
         uses: peter-evans/create-or-update-comment@v4
         with:
           comment-id: ${{ steps.find-comment.outputs.comment-id }}
