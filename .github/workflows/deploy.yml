@@ -48,6 +48,7 @@ jobs:
             <img src="https://github.com/user-attachments/assets/f94fada5-45ca-4271-9106-180728235ad2" alt="Rocket" width="25"/>
             Deployment of preview started...
           reactions: rocket
+          edit-mode: replace
 
       - name: Install Clang
         run: |
@@ -114,3 +115,4 @@ jobs:
             \n\n 
             📂  **View the source code here:**  https://github.com/${{ github.repository }}/tree/gh-pages/pr-preview/${{ github.event.pull_request.number }}/
           reactions: hooray
+          edit-mode: replace
