@@ -24,6 +24,7 @@ jobs:
       DOMAIN: ${{ github.actor }}.github.io
       DEPLOYMENT: '<img src="https://github.com/user-attachments/assets/f94fada5-45ca-4271-9106-180728235ad2" alt="Rocket" width="25"/>'
       CELEBRATION: '<img src="https://github.com/user-attachments/assets/86eb8470-c597-4f8b-a77d-a54036075271" alt="githubloading" width="25"/>'
+      COMMENT_IDENTIFIER: '<!-- preview-comment -->'
 
     concurrency: ci-${{ github.ref }}
     steps:
@@ -37,7 +38,7 @@ jobs:
         with:
           issue-number: ${{ github.event.pull_request.number }}
           comment-author: 'github-actions[bot]'
-          body-includes: '**Deployment of preview started...**'
+          body-includes: '<!-- preview-comment -->'
 
       - name: Post Initial Comment
         if: ${{ github.event_name == 'pull_request_target' && steps.find-comment.outputs.comment-id == '' }}
@@ -47,6 +48,7 @@ jobs:
           issue-number: ${{ github.event.pull_request.number }}
           body: |
             **Deployment of preview started...** ${{ env.DEPLOYMENT }}
+            ${{ env.COMMENT_IDENTIFIER }}
           reactions: rocket
 
       - name: Update Existing Comment to Deployment
@@ -58,6 +60,7 @@ jobs:
           issue-number: ${{ github.event.pull_request.number }}
           body: |
             **Deployment of preview started...** ${{ env.DEPLOYMENT }}
+            ${{ env.COMMENT_IDENTIFIER }}
           reactions: rocket
           edit-mode: replace
 
@@ -121,8 +124,9 @@ jobs:
           comment-id: ${{ steps.find-comment.outputs.comment-id }}
           issue-number: ${{ github.event.pull_request.number }}
           body: |
-            **A preview of this PR is available at:** [Preview Link](https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/${{ env.PR_PATH }}/) ${{ env.CELEBRATION }} 
+            **A preview of this PR is available at:** [Preview Link](https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/${{ env.PR_PATH }}/) ${{ env.CELEBRATION }}
             <br><br>
             📂 **View the source code here:** [View Source Code](https://github.com/${{ github.repository }}/tree/gh-pages/pr-preview/${{ github.event.pull_request.number }})
+            ${{ env.COMMENT_IDENTIFIER }}
           reactions: hooray
           edit-mode: replace
