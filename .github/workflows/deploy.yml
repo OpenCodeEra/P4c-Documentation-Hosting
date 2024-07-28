@@ -130,6 +130,7 @@ jobs:
             🔧 **Commit used for deployment:** `${{ github.sha }}`
             ${{ env.COMMENT_IDENTIFIER }}
           reactions: hooray
+          edit-mode: replace          
 
       - name: Post Failure Comment
         if: ${{ github.event_name == 'pull_request_target' && failure() }}
