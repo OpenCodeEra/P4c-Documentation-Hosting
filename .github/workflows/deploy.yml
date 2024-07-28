@@ -24,7 +24,7 @@ jobs:
       DOMAIN: ${{ github.actor }}.github.io
       DEPLOYMENT: '<img src="https://github.com/user-attachments/assets/f94fada5-45ca-4271-9106-180728235ad2" alt="Rocket" width="25"/>'
       CELEBRATION: '<img src="https://github.com/user-attachments/assets/86eb8470-c597-4f8b-a77d-a54036075271" alt="githubloading" width="25"/>'
-      FAILURE_ICON: '<img src="https://github.com/user-attachments/assets/86eb8470-c597-4f8b-a77d-a54036075271" alt="failed" width="25"/>'
+      FAILURE_ICON: '<img src="https://github.com/user-attachments/assets/af921ba9-953d-465e-b597-64ed0a2dc921" alt="failed" width="25"/>'
       COMMENT_IDENTIFIER: '<!-- preview-comment -->'
 
     concurrency: ci-${{ github.ref }}
