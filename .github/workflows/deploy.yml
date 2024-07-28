@@ -111,7 +111,7 @@ jobs:
           issue-number: ${{ github.event.pull_request.number }}
           body: |
             **A preview of this PR is available at:** [Preview Link](https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/${{ env.PR_PATH }}/) ${{ env.CELEBRATION }} 
-            \n \n 
+            <br><br>
             📂  **View the source code here:**  https://github.com/${{ github.repository }}/tree/gh-pages/pr-preview/${{ github.event.pull_request.number }}/
           reactions: hooray
           edit-mode: replace
