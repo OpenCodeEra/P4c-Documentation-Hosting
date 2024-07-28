@@ -22,7 +22,8 @@ jobs:
       DOXYGEN_AWESOME_VERSION: 2.3.3
       PR_PATH: pr-preview/${{ github.event.number }}
       DOMAIN: ${{ github.actor }}.github.io
-      CELEBRATION: '<img src="https://github.com/user-attachments/assets/86eb8470-c597-4f8b-a77d-a54036075271" alt="githubloading" width="30"/>'
+      DEPLOYMENT : <img src="https://github.com/user-attachments/assets/f94fada5-45ca-4271-9106-180728235ad2" alt="Rocket" width="25"/>
+      CELEBRATION: '<img src="https://github.com/user-attachments/assets/86eb8470-c597-4f8b-a77d-a54036075271" alt="githubloading" width="25"/>'
 
     concurrency: ci-${{ github.ref }}
     steps:
@@ -45,8 +46,7 @@ jobs:
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body: |
-            <img src="https://github.com/user-attachments/assets/f94fada5-45ca-4271-9106-180728235ad2" alt="Rocket" width="25"/>
-            Deployment of preview started...
+            Deployment of preview started...  ${{ env.DEPLOYMENT }} 
           reactions: rocket
           edit-mode: replace
 
