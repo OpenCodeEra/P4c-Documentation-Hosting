@@ -60,9 +60,8 @@ jobs:
           comment-id: ${{ steps.find-comment.outputs.comment-id }}
           issue-number: ${{ github.event.pull_request.number }}
           body: |
-            **Updated Deployment in progress...** ${{ env.DEPLOYMENT }}
+            **Deployment in progress...** ${{ env.DEPLOYMENT }}
             ${{ env.COMMENT_IDENTIFIER }}
-          reactions: rocket
           edit-mode: replace
 
       - name: Install Clang
@@ -129,36 +128,5 @@ jobs:
             📂 **View the source code here:** [View Source Code](https://github.com/${{ github.repository }}/tree/gh-pages/pr-preview/${{ github.event.pull_request.number }})
             🔧 **Commit used for deployment:** [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
             ${{ env.COMMENT_IDENTIFIER }}
-          reactions: hooray
-          edit-mode: replace          
-
-      - name: Post Failure Comment
-        if: ${{ github.event_name == 'pull_request_target' && failure() }}
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const { context } = require('@actions/github');
-            const issue_number = context.payload.pull_request.number;
-            const commentIdentifier = process.env.COMMENT_IDENTIFIER;
-            const body = `
-              **Deployment failed.** ${process.env.FAILURE_ICON}
-              ${commentIdentifier}
-              <br>
-              🔗 **View the workflow run logs:** [Logs](${context.run.html_url})
-            `;
-
-            const existingComment = steps.find-comment.outputs.comment-id;
-            if (existingComment) {
-              await github.rest.issues.updateComment({
-                ...context.repo,
-                comment_id: existingComment,
-                body: body
-              });
-            } else {
-              await github.rest.issues.createComment({
-                ...context.repo,
-                issue_number,
-                body: body
-              });
-            }
-
+          edit-mode: replace     
+               
