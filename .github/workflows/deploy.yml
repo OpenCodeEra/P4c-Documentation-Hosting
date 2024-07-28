@@ -45,8 +45,8 @@ jobs:
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body: |
-            <img src="https://github.com/user-attachments/assets/f94fada5-45ca-4271-9106-180728235ad2" alt="Rocket" width="30"/>
-             **Deployment of preview started...**
+            <img src="https://github.com/user-attachments/assets/f94fada5-45ca-4271-9106-180728235ad2" alt="Rocket" width="25"/>
+            Deployment of preview started...
           reactions: rocket
 
       - name: Install Clang
@@ -109,5 +109,8 @@ jobs:
           comment-id: ${{ steps.find-comment.outputs.comment-id }}
           issue-number: ${{ github.event.pull_request.number }}
           body: |
-            A preview of this PR is available at: [Preview Link](https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/${{ env.PR_PATH }}/) ${{ env.CELEBRATION }} \n\n 📂 **View the source code here:** https://github.com/${{ github.repository }}/tree/gh-pages/pr-preview/${{ github.event.pull_request.number }}/
+            A preview of this PR is available at: 
+            [Preview Link](https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/${{ env.PR_PATH }}/) ${{ env.CELEBRATION }} 
+            \n\n 
+            📂  **View the source code here:**  https://github.com/${{ github.repository }}/tree/gh-pages/pr-preview/${{ github.event.pull_request.number }}/
           reactions: hooray
