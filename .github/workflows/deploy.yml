@@ -12,7 +12,7 @@ on:
     branches:
       - Deploy-branch-Awsome-CSS
   pull_request_target:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
 
 jobs:
   build-and-deploy:
@@ -34,6 +34,21 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
+
+      - name: Check for 'documentation' label or changes in docs/doxygen
+        id: check_conditions
+        run: |
+          PR_NUMBER=$(echo "${{ github.event.number }}")
+          LABELS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/$PR_NUMBER/labels" \
+            | jq -r '.[].name')
+          CHANGES=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER/files" \
+            | jq -r '.[].filename')
+          if [[ "$LABELS" != *"documentation"* && "$CHANGES" != *"docs/doxygen"* ]]; then
+            echo "Neither documentation label nor changes in docs/doxygen found. Exiting."
+            exit 0
+          fi
 
       - name: Find Existing Comment
         if: ${{ github.event_name == 'pull_request_target' }}
