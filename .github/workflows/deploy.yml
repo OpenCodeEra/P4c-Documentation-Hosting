@@ -134,7 +134,7 @@ jobs:
           edit-mode: replace     
 
       - name: Update Comment with Failure Message
-        if: failure() && github.event_name == 'pull_request_target' && ${{ github.event.label.name == 'documentation'}}
+        if: ${{ github.event.label.name == 'documentation' && failure() && github.event_name == 'pull_request_target' }}
         uses: peter-evans/create-or-update-comment@v4
         with:
           comment-id: ${{ steps.find-comment.outputs.comment-id }}
