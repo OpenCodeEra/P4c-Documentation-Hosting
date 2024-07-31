@@ -35,23 +35,8 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
 
-      - name: Check for 'documentation' label or changes in docs/doxygen
-        id: check_conditions
-        run: |
-          PR_NUMBER=$(echo "${{ github.event.number }}")
-          LABELS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/issues/$PR_NUMBER/labels" \
-            | jq -r '.[].name')
-          CHANGES=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER/files" \
-            | jq -r '.[].filename')
-          if [[ "$LABELS" != *"documentation"* && "$CHANGES" != *"docs/doxygen"* ]]; then
-            echo "Neither documentation label nor changes in docs/doxygen found. Exiting."
-            exit 0
-          fi
-
       - name: Find Existing Comment
-        if: ${{ github.event_name == 'pull_request_target' }}
+        if: ${{ github.event_name == 'pull_request_target' }} && ${{ github.event.label.name == 'documentation'}}
         id: find-comment
         uses: peter-evans/find-comment@v3
         with:
@@ -60,7 +45,7 @@ jobs:
           body-includes: ${{ env.COMMENT_IDENTIFIER }}
 
       - name: Post Initial Comment
-        if: ${{ github.event_name == 'pull_request_target' && steps.find-comment.outputs.comment-id == '' }}
+        if: ${{ github.event_name == 'pull_request_target' && steps.find-comment.outputs.comment-id == '' &&  github.event.label.name == 'documentation' }}
         id: post-initial-comment
         uses: peter-evans/create-or-update-comment@v4
         with:
@@ -71,7 +56,7 @@ jobs:
           reactions: rocket
 
       - name: Update Comment to In-Progress
-        if: ${{ github.event_name == 'pull_request_target' && steps.find-comment.outputs.comment-id != '' }}
+        if: ${{ github.event_name == 'pull_request_target' && steps.find-comment.outputs.comment-id != '' &&  github.event.label.name == 'documentation' }}
         id: update-in-progress-comment
         uses: peter-evans/create-or-update-comment@v4
         with:
@@ -126,7 +111,7 @@ jobs:
             pr-preview/
 
       - name: Deploy to PR preview
-        if: ${{ github.event_name == 'pull_request_target' }}
+        if: ${{ github.event_name == 'pull_request_target' }} && ${{ github.event.label.name == 'documentation'}}
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -136,7 +121,7 @@ jobs:
           clean: false
 
       - name: Update Comment with Preview Link
-        if: ${{ github.event_name == 'pull_request_target' && steps.find-comment.outputs.comment-id != '' }}
+        if: ${{ github.event_name == 'pull_request_target' && steps.find-comment.outputs.comment-id != '' }} && ${{ github.event.label.name == 'documentation'}}
         uses: peter-evans/create-or-update-comment@v4
         with:
           comment-id: ${{ steps.find-comment.outputs.comment-id }}
@@ -149,7 +134,7 @@ jobs:
           edit-mode: replace     
 
       - name: Update Comment with Failure Message
-        if: failure() && github.event_name == 'pull_request_target'
+        if: failure() && github.event_name == 'pull_request_target' && && ${{ github.event.label.name == 'documentation'}}
         uses: peter-evans/create-or-update-comment@v4
         with:
           comment-id: ${{ steps.find-comment.outputs.comment-id }}
