@@ -12,7 +12,7 @@ on:
     branches:
       - Deploy-branch-Awsome-CSS
   pull_request_target:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
 
 jobs:
   build-and-deploy:
@@ -35,8 +35,22 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
 
-      - name: Find Existing Comment
+      - name: Check PR Label
+        id: check-label
         if: ${{ github.event_name == 'pull_request_target' }}
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data: labels } = await github.rest.issues.listLabelsOnIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+            const hasDocumentationLabel = labels.some(label => label.name === 'documentation');
+            return hasDocumentationLabel;
+
+      - name: Find Existing Comment
+        if: ${{ github.event_name == 'pull_request_target' && steps.check-label.outputs.result == 'true' }}
         id: find-comment
         uses: peter-evans/find-comment@v3
         with:
@@ -45,7 +59,7 @@ jobs:
           body-includes: ${{ env.COMMENT_IDENTIFIER }}
 
       - name: Post Initial Comment
-        if: ${{ github.event_name == 'pull_request_target' && steps.find-comment.outputs.comment-id == '' }}
+        if: ${{ github.event_name == 'pull_request_target' && steps.check-label.outputs.result == 'true' && steps.find-comment.outputs.comment-id == '' }}
         id: post-initial-comment
         uses: peter-evans/create-or-update-comment@v4
         with:
@@ -56,7 +70,7 @@ jobs:
           reactions: rocket
 
       - name: Update Comment to In-Progress
-        if: ${{ github.event_name == 'pull_request_target' && steps.find-comment.outputs.comment-id != '' }}
+        if: ${{ github.event_name == 'pull_request_target' && steps.check-label.outputs.result == 'true' && steps.find-comment.outputs.comment-id != '' }}
         id: update-in-progress-comment
         uses: peter-evans/create-or-update-comment@v4
         with:
@@ -68,11 +82,13 @@ jobs:
           edit-mode: replace
 
       - name: Install Clang
+        if: ${{ github.event_name == 'push' || steps.check-label.outputs.result == 'true' }}
         run: |
           sudo apt-get update
           sudo apt-get install -y clang
 
       - name: Install Doxygen
+        if: ${{ github.event_name == 'push' || steps.check-label.outputs.result == 'true'}}
         run: |
           wget https://github.com/doxygen/doxygen/releases/download/Release_${DOXYGEN_VERSION//./_}/doxygen-${DOXYGEN_VERSION}.linux.bin.tar.gz
           tar xzvf doxygen-${{ env.DOXYGEN_VERSION }}.linux.bin.tar.gz
@@ -82,19 +98,23 @@ jobs:
           rm -rf doxygen-${{ env.DOXYGEN_VERSION }}*
 
       - name: Install Graphviz
+        if: ${{ github.event_name == 'push' || steps.check-label.outputs.result == 'true' }}
         run: sudo apt-get install graphviz -y
 
       - name: Clone Doxygen Awesome CSS Themes
+        if: ${{ github.event_name == 'push' || steps.check-label.outputs.result == 'true'}}
         working-directory: ./docs/doxygen
         run: |
           git clone --depth 1 -b v${{ env.DOXYGEN_AWESOME_VERSION }} https://github.com/jothepro/doxygen-awesome-css awesome_css
 
       - name: Generate Doxygen Documentation
+        if: ${{ github.event_name == 'push' || steps.check-label.outputs.result == 'true'}}
         run: |
           cd docs/doxygen
           doxygen doxygen.cfg
 
       - name: Create .nojekyll
+        if: ${{ github.event_name == 'push' || steps.check-label.outputs.result == 'true'}}
         run: |
           cd docs/doxygen/build/html
           touch .nojekyll
@@ -111,7 +131,7 @@ jobs:
             pr-preview/
 
       - name: Deploy to PR preview
-        if: ${{ github.event_name == 'pull_request_target' }}
+        if: ${{ github.event_name == 'pull_request_target' && steps.check-label.outputs.result == 'true' }}
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -120,21 +140,33 @@ jobs:
           target-folder: ${{ env.PR_PATH }}
           clean: false
 
+      - name: Find Existing Comment
+        if: ${{ github.event_name == 'pull_request_target' && steps.check-label.outputs.result == 'true' }}
+        id: find-comment2
+        uses: peter-evans/find-comment@v3
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: ${{ env.COMMENT_IDENTIFIER }}
+
       - name: Update Comment with Preview Link
-        if: ${{ github.event_name == 'pull_request_target' && steps.find-comment.outputs.comment-id != '' }}
+        if: ${{ github.event_name == 'pull_request_target' && steps.check-label.outputs.result == 'true' }}
         uses: peter-evans/create-or-update-comment@v4
         with:
-          comment-id: ${{ steps.find-comment.outputs.comment-id }}
+          comment-id: ${{ steps.find-comment2.outputs.comment-id }}
           issue-number: ${{ github.event.pull_request.number }}
           body: |
-            ${{ env.CELEBRATION }} **A preview of this PR is available at:** [Preview Link](https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/${{ env.PR_PATH }}/) 
-            📂 **View the source code here:** [View Source Code](https://github.com/${{ github.repository }}/tree/gh-pages/pr-preview/${{ github.event.pull_request.number }})
-            🔧 **Commit used for deployment:** [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+            | ${{ env.CELEBRATION }} **A preview of this PR is available at:** | [Preview Link](https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/${{ env.PR_PATH }}/) |
+            | -- | -- |
+            | 📂 **View the source code here:** | [View Source Code](https://github.com/${{ github.repository }}/tree/gh-pages/pr-preview/${{ github.event.pull_request.number }}) |
+            | 🔧 **Commit used for deployment:** | [${{ github.event.pull_request.head.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.event.pull_request.head.sha }}) |
+      
+            **Note:** Changes may take a few seconds to appear on GitHub Pages. Please refresh the page if you do not see the updates immediately.
             ${{ env.COMMENT_IDENTIFIER }}
           edit-mode: replace     
 
       - name: Update Comment with Failure Message
-        if: failure() && github.event_name == 'pull_request_target'
+        if: ${{ github.event_name == 'pull_request_target' && steps.check-label.outputs.result == 'true' && failure() }}
         uses: peter-evans/create-or-update-comment@v4
         with:
           comment-id: ${{ steps.find-comment.outputs.comment-id }}
