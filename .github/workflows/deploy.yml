@@ -150,7 +150,7 @@ jobs:
           body-includes: ${{ env.COMMENT_IDENTIFIER }}
 
       - name: Update Comment with Preview Link
-        if: ${{ github.event_name == 'pull_request_target' && steps.check-label.outputs.result == 'true' && steps.find-comment2.outputs.comment-id != '' }}
+        if: ${{ github.event_name == 'pull_request_target' && steps.check-label.outputs.result == 'true' && (steps.find-comment2.outputs.comment-id != ''|| steps.find-comment.outputs.comment-id != '') }}
         uses: peter-evans/create-or-update-comment@v4
         with:
           comment-id: ${{ steps.find-comment2.outputs.comment-id }}
