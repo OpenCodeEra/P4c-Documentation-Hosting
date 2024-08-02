@@ -82,13 +82,13 @@ jobs:
           edit-mode: replace
 
       - name: Install Clang
-        if: ${{ github.event_name == 'push' }}
+        if: ${{ github.event_name == 'push' || steps.check-label.outputs.result == 'true' }}
         run: |
           sudo apt-get update
           sudo apt-get install -y clang
 
       - name: Install Doxygen
-        if: ${{ github.event_name == 'push' }}
+        if: ${{ github.event_name == 'push' || steps.check-label.outputs.result == 'true'}}
         run: |
           wget https://github.com/doxygen/doxygen/releases/download/Release_${DOXYGEN_VERSION//./_}/doxygen-${DOXYGEN_VERSION}.linux.bin.tar.gz
           tar xzvf doxygen-${{ env.DOXYGEN_VERSION }}.linux.bin.tar.gz
@@ -98,23 +98,23 @@ jobs:
           rm -rf doxygen-${{ env.DOXYGEN_VERSION }}*
 
       - name: Install Graphviz
-        if: ${{ github.event_name == 'push' }}
+        if: ${{ github.event_name == 'push' || steps.check-label.outputs.result == 'true' }}
         run: sudo apt-get install graphviz -y
 
       - name: Clone Doxygen Awesome CSS Themes
-        if: ${{ github.event_name == 'push' }}
+        if: ${{ github.event_name == 'push' || steps.check-label.outputs.result == 'true'}}
         working-directory: ./docs/doxygen
         run: |
           git clone --depth 1 -b v${{ env.DOXYGEN_AWESOME_VERSION }} https://github.com/jothepro/doxygen-awesome-css awesome_css
 
       - name: Generate Doxygen Documentation
-        if: ${{ github.event_name == 'push' }}
+        if: ${{ github.event_name == 'push' || steps.check-label.outputs.result == 'true'}}
         run: |
           cd docs/doxygen
           doxygen doxygen.cfg
 
       - name: Create .nojekyll
-        if: ${{ github.event_name == 'push' }}
+        if: ${{ github.event_name == 'push' || steps.check-label.outputs.result == 'true'}}
         run: |
           cd docs/doxygen/build/html
           touch .nojekyll
