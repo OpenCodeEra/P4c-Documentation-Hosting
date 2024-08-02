@@ -156,10 +156,10 @@ jobs:
           comment-id: ${{ steps.find-comment2.outputs.comment-id }}
           issue-number: ${{ github.event.pull_request.number }}
           body: |
-            ${{ env.CELEBRATION }} **A preview of this PR is available at:** [Preview Link](https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/${{ env.PR_PATH }}/) 
-            | 📂 **View the source code here:** [View Source Code](https://github.com/${{ github.repository }}/tree/gh-pages/pr-preview/${{ github.event.pull_request.number }}) |
-            | --- |
-            | 🔧 **Commit used for deployment:** [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }}) |
+            | ${{ env.CELEBRATION }} **A preview of this PR is available at:** | [Preview Link](https://${{ env.DOMAIN }}/${{ github.event.repository.name }}/${{ env.PR_PATH }}/) |
+            | -- | -- |
+            | 📂 **View the source code here:** | [View Source Code](https://github.com/${{ github.repository }}/tree/gh-pages/pr-preview/${{ github.event.pull_request.number }}) |
+            | 🔧 **Commit used for deployment:** | [${{ github.event.pull_request.head.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.event.pull_request.head.sha }}) |
       
             **Note:** Changes may take a few seconds to appear on GitHub Pages. Please refresh the page if you do not see the updates immediately.
             ${{ env.COMMENT_IDENTIFIER }}
