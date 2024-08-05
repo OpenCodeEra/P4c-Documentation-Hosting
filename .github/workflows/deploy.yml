@@ -41,9 +41,8 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            const labels = github.event.pull_request.labels.map(label => label.name);
-            return labels.includes('documentation');
-          result-encoding: string
+            const hasDocumentationLabel = contains(github.event.pull_request.labels.*.name, 'documentation')
+            return hasDocumentationLabel;
 
       - name: Find Existing Comment
         if: ${{ github.event_name == 'pull_request_target' && steps.check-label.outputs.result == 'true' }}
